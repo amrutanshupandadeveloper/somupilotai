@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../context/ThemeContext";
@@ -22,6 +22,7 @@ const pageTitles = {
 
 function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [topBarConfig, setTopBarConfig] = useState({});
   const { user, logout, usage, usageCountdown } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -31,8 +32,17 @@ function DashboardLayout() {
     await logout();
   };
 
+  const outletContext = useMemo(
+    () => ({
+      setTopBarConfig,
+      resetTopBarConfig: () => setTopBarConfig({}),
+      onMenuOpen: () => setIsSidebarOpen(true),
+    }),
+    []
+  );
+
   return (
-    <div className="app-shell h-screen overflow-hidden flex bg-black">
+    <div className="app-shell flex h-screen overflow-hidden bg-black">
       <div className="mx-auto flex h-full w-full max-w-[1720px]">
         <AppSidebar
           isOpen={isSidebarOpen}
@@ -58,17 +68,23 @@ function DashboardLayout() {
 
         <div className="flex h-full min-w-0 flex-1 flex-col">
           <TopBar
-            title={pageTitles[location.pathname] || "SomuPilot AI"}
+            title={topBarConfig.title || pageTitles[location.pathname] || "SomuPilot AI"}
+            subtitle={topBarConfig.subtitle || "SomuPilot AI"}
             user={user}
             usage={usage}
             usageCountdown={usageCountdown}
             theme={theme}
             onToggleTheme={toggleTheme}
             onMenuOpen={() => setIsSidebarOpen(true)}
+            compact={topBarConfig.compact !== false}
+            showSignedIn={topBarConfig.showSignedIn === true}
+            showUsage={topBarConfig.showUsage !== false}
+            showThemeToggle={topBarConfig.showThemeToggle !== false}
+            rightSlot={topBarConfig.rightSlot || null}
           />
 
           <main className="min-w-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 xl:px-8">
-            <Outlet />
+            <Outlet context={outletContext} />
           </main>
         </div>
       </div>

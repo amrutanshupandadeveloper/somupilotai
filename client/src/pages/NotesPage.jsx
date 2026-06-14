@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import { notesService } from "../services/notesService";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { EmptyState } from "../components/ui/EmptyState";
-import { ListSkeleton } from "../components/ui/LoadingSkeleton";
+import { ListSkeleton, PageHeaderSkeleton } from "../components/ui/LoadingSkeleton";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
+import { useAuth } from "../hooks/useAuth";
+import UserTopBarActions from "../components/UserTopBarActions";
 
 function NotesPage() {
+  const { setTopBarConfig, resetTopBarConfig } = useOutletContext();
+  const { usage } = useAuth();
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -38,6 +43,23 @@ function NotesPage() {
 
     fetchNotes();
   }, [searchQuery]);
+
+  useEffect(() => {
+    setTopBarConfig({
+      title: "Notes",
+      subtitle: "SomuPilot AI",
+      showUsage: false,
+      rightSlot: (
+        <UserTopBarActions
+          usage={usage}
+          primaryActionLabel="Add note"
+          onPrimaryAction={() => setShowModal(true)}
+        />
+      ),
+    });
+
+    return () => resetTopBarConfig();
+  }, [usage]);
 
   const resetForm = () => {
     setShowModal(false);
@@ -99,11 +121,14 @@ function NotesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Notes"
-        subtitle="Capture ideas, save reference snippets, and keep your working knowledge easy to revisit."
-        actions={<Button onClick={() => setShowModal(true)}>Add note</Button>}
-      />
+      {loading ? (
+        <PageHeaderSkeleton />
+      ) : (
+        <PageHeader
+          title="Notes"
+          subtitle="Capture ideas, save reference snippets, and keep your working knowledge easy to revisit."
+        />
+      )}
 
       <SectionCard>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">

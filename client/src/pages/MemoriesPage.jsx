@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
+import { useOutletContext } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 import { memoryService } from "../services/memoryService";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { EmptyState } from "../components/ui/EmptyState";
-import { ListSkeleton } from "../components/ui/LoadingSkeleton";
+import { ListSkeleton, PageHeaderSkeleton } from "../components/ui/LoadingSkeleton";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
+import UserTopBarActions from "../components/UserTopBarActions";
 
 const categories = [
   "preference",
@@ -20,6 +23,8 @@ const categories = [
 ];
 
 function MemoriesPage() {
+  const { setTopBarConfig, resetTopBarConfig } = useOutletContext();
+  const { usage } = useAuth();
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -59,6 +64,23 @@ function MemoriesPage() {
     fetchMemories();
   }, [searchQuery, categoryFilter]);
 
+  useEffect(() => {
+    setTopBarConfig({
+      title: "Memories",
+      subtitle: "SomuPilot AI",
+      showUsage: false,
+      rightSlot: (
+        <UserTopBarActions
+          usage={usage}
+          primaryActionLabel="Add memory"
+          onPrimaryAction={() => setShowModal(true)}
+        />
+      ),
+    });
+
+    return () => resetTopBarConfig();
+  }, [usage]);
+
   const resetForm = () => {
     setShowModal(false);
     setEditingMemory(null);
@@ -94,11 +116,14 @@ function MemoriesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Memories"
-        subtitle="Memories help SomuPilot personalize replies using preferences, goals, profile details, and recurring context you choose to save."
-        actions={<Button onClick={() => setShowModal(true)}>Add memory</Button>}
-      />
+      {loading ? (
+        <PageHeaderSkeleton />
+      ) : (
+        <PageHeader
+          title="Memories"
+          subtitle="Memories help SomuPilot personalize replies using preferences, goals, profile details, and recurring context you choose to save."
+        />
+      )}
 
       <SectionCard>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px]">

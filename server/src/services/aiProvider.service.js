@@ -5,7 +5,7 @@ const SYSTEM_PROMPT =
 
 const CONTEXT_MESSAGE_LIMIT = 12;
 const DEFAULT_PROVIDER = "auto";
-const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash";
 const DEFAULT_GROQ_MODEL = "llama-3.1-8b-instant";
 const DEFAULT_OPENROUTER_MODEL = "meta-llama/llama-3.1-8b-instruct:free";
 const DEFAULT_OLLAMA_MODEL = "llama3.1:8b";
@@ -477,8 +477,12 @@ const providerHandlers = {
   ollama: callOllama,
 };
 
-const generateAiResponse = async ({ messages, systemPrompt = SYSTEM_PROMPT }) => {
-  const providerOrder = getProviderOrder();
+const generateAiResponse = async ({ messages, systemPrompt = SYSTEM_PROMPT, overrideProvider }) => {
+  let providerOrder = getProviderOrder();
+
+  if (overrideProvider && overrideProvider !== "auto" && PROVIDERS.includes(overrideProvider)) {
+    providerOrder = [overrideProvider];
+  }
 
   if (providerOrder.length === 0) {
     throw createHttpError(

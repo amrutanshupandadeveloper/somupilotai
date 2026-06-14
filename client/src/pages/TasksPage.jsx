@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
+import { useOutletContext } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 import { tasksService } from "../services/tasksService";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { EmptyState } from "../components/ui/EmptyState";
-import { ListSkeleton } from "../components/ui/LoadingSkeleton";
+import { ListSkeleton, PageHeaderSkeleton } from "../components/ui/LoadingSkeleton";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
+import UserTopBarActions from "../components/UserTopBarActions";
 
 function TasksPage() {
+  const { setTopBarConfig, resetTopBarConfig } = useOutletContext();
+  const { usage } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -48,6 +53,23 @@ function TasksPage() {
   useEffect(() => {
     fetchTasks();
   }, [statusFilter, priorityFilter]);
+
+  useEffect(() => {
+    setTopBarConfig({
+      title: "Tasks",
+      subtitle: "SomuPilot AI",
+      showUsage: false,
+      rightSlot: (
+        <UserTopBarActions
+          usage={usage}
+          primaryActionLabel="Add task"
+          onPrimaryAction={() => setShowModal(true)}
+        />
+      ),
+    });
+
+    return () => resetTopBarConfig();
+  }, [usage]);
 
   const groupedTasks = useMemo(
     () => ({
@@ -158,11 +180,14 @@ function TasksPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Tasks"
-        subtitle="Plan work clearly, track progress, and keep priorities visible throughout the day."
-        actions={<Button onClick={() => setShowModal(true)}>Add task</Button>}
-      />
+      {loading ? (
+        <PageHeaderSkeleton />
+      ) : (
+        <PageHeader
+          title="Tasks"
+          subtitle="Plan work clearly, track progress, and keep priorities visible throughout the day."
+        />
+      )}
 
       <SectionCard>
         <div className="grid gap-4 md:grid-cols-2">

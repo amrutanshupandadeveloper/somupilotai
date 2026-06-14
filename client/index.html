@@ -8,9 +8,126 @@
       content="SomuPilot AI - Personal AI Agent Dashboard"
     />
     <title>SomuPilot AI</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --boot-bg: #000000;
+        --boot-surface: #0d0d0d;
+        --boot-border: rgba(255, 255, 255, 0.08);
+        --boot-track: rgba(255, 255, 255, 0.06);
+        --boot-gradient: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.03) 42%,
+          rgba(255, 255, 255, 0.08) 50%,
+          rgba(255, 255, 255, 0.03) 58%,
+          transparent 100%
+        );
+      }
+
+      body {
+        margin: 0;
+        background: var(--boot-bg);
+      }
+
+      .boot-shell {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background:
+          radial-gradient(circle at top left, rgba(20, 184, 166, 0.08), transparent 24%),
+          #000000;
+      }
+
+      .boot-topbar {
+        height: 72px;
+        border-bottom: 1px solid var(--boot-border);
+      }
+
+      .boot-body {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        min-height: calc(100vh - 72px);
+      }
+
+      .boot-sidebar {
+        border-right: 1px solid var(--boot-border);
+        padding: 18px;
+      }
+
+      .boot-main {
+        padding: 22px;
+      }
+
+      .boot-card {
+        border: 1px solid var(--boot-border);
+        border-radius: 28px;
+        background: var(--boot-surface);
+      }
+
+      .boot-shimmer {
+        position: relative;
+        overflow: hidden;
+        background-color: var(--boot-track);
+      }
+
+      .boot-shimmer::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: var(--boot-gradient);
+        background-size: 220% 100%;
+        animation: boot-shimmer 2.2s linear infinite;
+      }
+
+      @keyframes boot-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -120% 0; }
+      }
+
+      @media (max-width: 900px) {
+        .boot-body {
+          grid-template-columns: 1fr;
+        }
+
+        .boot-sidebar {
+          display: none;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-shell">
+        <div class="boot-topbar"></div>
+        <div class="boot-body">
+          <aside class="boot-sidebar">
+            <div class="boot-card" style="height: 110px;"></div>
+            <div class="boot-card" style="height: 52px; margin-top: 14px;"></div>
+            <div class="boot-card" style="height: 90px; margin-top: 14px;"></div>
+            <div class="boot-shimmer" style="height: 18px; width: 76%; margin-top: 22px; border-radius: 999px;"></div>
+            <div class="boot-shimmer" style="height: 18px; width: 68%; margin-top: 16px; border-radius: 999px;"></div>
+            <div class="boot-shimmer" style="height: 18px; width: 72%; margin-top: 16px; border-radius: 999px;"></div>
+            <div class="boot-card" style="height: 82px; margin-top: 28px;"></div>
+          </aside>
+          <main class="boot-main">
+            <div class="boot-shimmer" style="height: 14px; width: 120px; border-radius: 999px;"></div>
+            <div class="boot-shimmer" style="height: 40px; width: min(420px, 100%); margin-top: 16px; border-radius: 20px;"></div>
+            <div class="boot-card" style="margin-top: 20px; padding: 22px;">
+              <div class="boot-shimmer" style="height: 18px; width: 180px; border-radius: 12px;"></div>
+              <div class="boot-shimmer" style="height: 16px; width: 100%; margin-top: 14px; border-radius: 12px;"></div>
+              <div class="boot-shimmer" style="height: 16px; width: 84%; margin-top: 10px; border-radius: 12px;"></div>
+              <div class="boot-shimmer" style="height: 16px; width: 90%; margin-top: 10px; border-radius: 12px;"></div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 18px;">
+              <div class="boot-card" style="height: 168px;"></div>
+              <div class="boot-card" style="height: 168px;"></div>
+              <div class="boot-card" style="height: 168px;"></div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

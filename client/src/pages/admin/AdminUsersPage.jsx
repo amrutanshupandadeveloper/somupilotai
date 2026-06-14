@@ -5,6 +5,11 @@ import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { ConfirmModal } from "../../components/ui/ConfirmModal";
 import {
+  DirectorySkeleton,
+  LoadingSkeleton,
+  PageHeaderSkeleton,
+} from "../../components/ui/LoadingSkeleton";
+import {
   getAdminUsers,
   resetAdminUserCredits,
   updateAdminUserCredits,
@@ -24,6 +29,7 @@ const initialCreditForm = {
 function AdminUsersPage() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ search: "", role: "all", status: "all", page: 1 });
   const [editingUser, setEditingUser] = useState(null);
   const [creditForm, setCreditForm] = useState(initialCreditForm);
@@ -40,12 +46,15 @@ function AdminUsersPage() {
   );
 
   const loadUsers = async () => {
+    setLoading(true);
     try {
       const response = await getAdminUsers(query);
       setResult(response.data);
       setError("");
     } catch (loadError) {
       setError(loadError.response?.data?.message || "Unable to load users.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -88,40 +97,53 @@ function AdminUsersPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        title="Admin Users"
-        subtitle="Search accounts, change roles, block access, and tune credit limits safely."
-      />
+      {loading && !result ? (
+        <PageHeaderSkeleton />
+      ) : (
+        <PageHeader
+          title="Admin Users"
+          subtitle="Search accounts, change roles, block access, and tune credit limits safely."
+        />
+      )}
 
       <SectionCard title="Search & Filters">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
-          <input
-            type="text"
-            value={filters.search}
-            onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value, page: 1 }))}
-            placeholder="Search name or email"
-            className="min-h-12 rounded-2xl border border-[var(--border)] bg-white/5 px-4 text-sm text-[var(--text)] outline-none transition focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--accent)]/20"
-          />
-          <select
-            value={filters.role}
-            onChange={(event) => setFilters((current) => ({ ...current, role: event.target.value, page: 1 }))}
-            className="min-h-12 rounded-2xl border border-[var(--border)] bg-white/5 px-4 text-sm text-[var(--text)] outline-none"
-          >
-            <option value="all">All Roles</option>
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-          </select>
-          <select
-            value={filters.status}
-            onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value, page: 1 }))}
-            className="min-h-12 rounded-2xl border border-[var(--border)] bg-white/5 px-4 text-sm text-[var(--text)] outline-none"
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="blocked">Blocked</option>
-          </select>
-          <Button onClick={loadUsers}>Refresh</Button>
-        </div>
+        {loading && !result ? (
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
+            <LoadingSkeleton className="h-12 rounded-2xl" />
+            <LoadingSkeleton className="h-12 rounded-2xl" />
+            <LoadingSkeleton className="h-12 rounded-2xl" />
+            <LoadingSkeleton className="h-12 rounded-2xl" />
+          </div>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value, page: 1 }))}
+              placeholder="Search name or email"
+              className="min-h-12 rounded-2xl border border-[var(--border)] bg-white/5 px-4 text-sm text-[var(--text)] outline-none transition focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--accent)]/20"
+            />
+            <select
+              value={filters.role}
+              onChange={(event) => setFilters((current) => ({ ...current, role: event.target.value, page: 1 }))}
+              className="min-h-12 rounded-2xl border border-[var(--border)] bg-white/5 px-4 text-sm text-[var(--text)] outline-none"
+            >
+              <option value="all">All Roles</option>
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+            <select
+              value={filters.status}
+              onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value, page: 1 }))}
+              className="min-h-12 rounded-2xl border border-[var(--border)] bg-white/5 px-4 text-sm text-[var(--text)] outline-none"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="blocked">Blocked</option>
+            </select>
+            <Button onClick={loadUsers}>Refresh</Button>
+          </div>
+        )}
       </SectionCard>
 
       {error ? (
@@ -131,63 +153,67 @@ function AdminUsersPage() {
       ) : null}
 
       <SectionCard title="User Directory">
-        <div className="space-y-4">
-          {result?.items?.length ? (
-            result.items.map((user) => (
-              <div key={user.id} className="rounded-3xl border border-[var(--border)] bg-white/5 p-4">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-base font-semibold text-[var(--text)]">{user.name}</p>
-                      <Badge variant={user.role === "admin" ? "purple" : "info"}>{user.role}</Badge>
-                      <Badge variant={user.status === "active" ? "success" : "danger"}>
-                        {user.status}
-                      </Badge>
+        {loading && !result ? (
+          <DirectorySkeleton count={5} />
+        ) : (
+          <div className="space-y-4">
+            {result?.items?.length ? (
+              result.items.map((user) => (
+                <div key={user.id} className="rounded-3xl border border-[var(--border)] bg-white/5 p-4">
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-base font-semibold text-[var(--text)]">{user.name}</p>
+                        <Badge variant={user.role === "admin" ? "purple" : "info"}>{user.role}</Badge>
+                        <Badge variant={user.status === "active" ? "success" : "danger"}>
+                          {user.status}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">{user.email}</p>
+                      <div className="mt-3 flex flex-wrap gap-4 text-xs text-[var(--text-muted)]">
+                        <span>AI {user.usage?.aiCredits ?? 0}/{user.usage?.maxAiCredits ?? 0}</span>
+                        <span>Docs {user.usage?.documentCredits ?? 0}/{user.usage?.maxDocumentCredits ?? 0}</span>
+                        <span>PDFs {user.usage?.pdfUploadsToday ?? 0}/{user.usage?.maxPdfUploadsPerDay ?? 0}</span>
+                        <span>Last login {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "Never"}</span>
+                      </div>
                     </div>
-                    <p className="mt-1 text-sm text-[var(--text-muted)]">{user.email}</p>
-                    <div className="mt-3 flex flex-wrap gap-4 text-xs text-[var(--text-muted)]">
-                      <span>AI {user.usage?.aiCredits ?? 0}/{user.usage?.maxAiCredits ?? 0}</span>
-                      <span>Docs {user.usage?.documentCredits ?? 0}/{user.usage?.maxDocumentCredits ?? 0}</span>
-                      <span>PDFs {user.usage?.pdfUploadsToday ?? 0}/{user.usage?.maxPdfUploadsPerDay ?? 0}</span>
-                      <span>Last login {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "Never"}</span>
-                    </div>
-                  </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <Button variant="secondary" size="sm" onClick={() => openEditCredits(user)}>
-                      Edit Credits
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={async () => {
-                        await updateAdminUserRole(user.id, user.role === "admin" ? "user" : "admin");
-                        await loadUsers();
-                      }}
-                    >
-                      {user.role === "admin" ? "Make User" : "Make Admin"}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={async () => {
-                        await updateAdminUserStatus(user.id, user.status === "active" ? "blocked" : "active");
-                        await loadUsers();
-                      }}
-                    >
-                      {user.status === "active" ? "Block" : "Unblock"}
-                    </Button>
-                    <Button variant="danger" size="sm" onClick={() => setPendingResetUser(user)}>
-                      Reset Credits
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="secondary" size="sm" onClick={() => openEditCredits(user)}>
+                        Edit Credits
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={async () => {
+                          await updateAdminUserRole(user.id, user.role === "admin" ? "user" : "admin");
+                          await loadUsers();
+                        }}
+                      >
+                        {user.role === "admin" ? "Make User" : "Make Admin"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={async () => {
+                          await updateAdminUserStatus(user.id, user.status === "active" ? "blocked" : "active");
+                          await loadUsers();
+                        }}
+                      >
+                        {user.status === "active" ? "Block" : "Unblock"}
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => setPendingResetUser(user)}>
+                        Reset Credits
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-[var(--text-muted)]">No users matched these filters.</p>
-          )}
-        </div>
+              ))
+            ) : (
+              <p className="text-sm text-[var(--text-muted)]">No users matched these filters.</p>
+            )}
+          </div>
+        )}
 
         {result?.pagination ? (
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--text-muted)]">

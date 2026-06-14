@@ -10,12 +10,10 @@ export function CreditBadge({ credits = 0, maxCredits = 0, label, countdown }) {
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <Badge variant={variant}>
-        {credits}/{maxCredits} credits
-      </Badge>
+    <div className="flex items-center gap-2 whitespace-nowrap">
+      <Badge variant={variant}>{credits}/{maxCredits} credits</Badge>
       {label || countdown ? (
-        <span className="text-xs text-[var(--text-muted)]">
+        <span className="text-[11px] text-[var(--text-muted)]">
           {label}
           {label && countdown ? " • " : ""}
           {countdown ? `Renews in ${countdown}` : ""}

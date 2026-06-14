@@ -36,6 +36,15 @@ const conversationMessageSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    documentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Document",
+      default: null,
+    },
+    documentName: {
+      type: String,
+      default: "",
+    },
   },
   {
     _id: false,

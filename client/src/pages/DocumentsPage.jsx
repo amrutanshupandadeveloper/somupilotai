@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { documentService } from "../services/documentService";
 import { getFriendlyAiErrorMessage } from "../utils/aiError";
@@ -7,10 +8,12 @@ import { SectionCard } from "../components/ui/SectionCard";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { EmptyState } from "../components/ui/EmptyState";
-import { ListSkeleton } from "../components/ui/LoadingSkeleton";
+import { ListSkeleton, PageHeaderSkeleton, LoadingSkeleton } from "../components/ui/LoadingSkeleton";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
+import UserTopBarActions from "../components/UserTopBarActions";
 
 function DocumentsPage() {
+  const { setTopBarConfig, resetTopBarConfig } = useOutletContext();
   const { usage, usageCountdown, setUsage } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +43,31 @@ function DocumentsPage() {
   useEffect(() => {
     fetchDocuments();
   }, []);
+
+  useEffect(() => {
+    setTopBarConfig({
+      title: "Documents",
+      subtitle: "SomuPilot AI",
+      showUsage: false,
+      rightSlot: (
+        <UserTopBarActions
+          usage={usage}
+          secondaryContent={
+            <div className="hidden items-center gap-2 sm:flex">
+              <Badge variant="default">
+                PDF {usage?.pdfUploadsToday || 0}/{usage?.maxPdfUploadsPerDay || 0}
+              </Badge>
+              <Badge variant="info">
+                Q&A {usage?.documentCredits || 0}/{usage?.maxDocumentCredits || 0}
+              </Badge>
+            </div>
+          }
+        />
+      ),
+    });
+
+    return () => resetTopBarConfig();
+  }, [usage?.pdfUploadsToday, usage?.maxPdfUploadsPerDay, usage?.documentCredits, usage?.maxDocumentCredits]);
 
   const validateFile = (file) => {
     if (!file) {
@@ -138,67 +166,68 @@ function DocumentsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Documents"
-        subtitle="Upload PDFs, keep source material organized, and ask precise questions grounded in your files."
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="default">
-              PDF {usage?.pdfUploadsToday || 0}/{usage?.maxPdfUploadsPerDay || 0}
-            </Badge>
-            <Badge variant="info">
-              Q&A {usage?.documentCredits || 0}/{usage?.maxDocumentCredits || 0}
-            </Badge>
-          </div>
-        }
-      />
+      {loading ? (
+        <PageHeaderSkeleton />
+      ) : (
+        <PageHeader
+          title="Documents"
+          subtitle="Upload PDFs, keep source material organized, and ask precise questions grounded in your files."
+        />
+      )}
 
       <SectionCard title="Upload PDF">
-        <div
-          className={`rounded-[28px] border-2 border-dashed p-8 text-center transition ${
-            dragActive
-              ? "border-emerald-400/45 bg-emerald-500/8"
-              : "border-[var(--border)] bg-white/5 hover:border-[var(--border-strong)]"
-          }`}
-          onDragEnter={(event) => {
-            event.preventDefault();
-            setDragActive(true);
-          }}
-          onDragLeave={(event) => {
-            event.preventDefault();
-            setDragActive(false);
-          }}
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={(event) => {
-            event.preventDefault();
-            setDragActive(false);
-            const file = event.dataTransfer.files?.[0];
-            if (validateFile(file)) {
-              setSelectedFile(file);
-            }
-          }}
-        >
-          <input
-            type="file"
-            accept=".pdf"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
+        {loading ? (
+          <div className="rounded-[28px] border-2 border-dashed border-[var(--border)] bg-white/5 p-8 text-center">
+            <LoadingSkeleton className="mx-auto h-5 w-64 rounded-xl" />
+            <LoadingSkeleton className="mx-auto mt-4 h-4 w-72 rounded-xl" />
+          </div>
+        ) : (
+          <div
+            className={`rounded-[28px] border-2 border-dashed p-8 text-center transition ${
+              dragActive
+                ? "border-emerald-400/45 bg-emerald-500/8"
+                : "border-[var(--border)] bg-white/5 hover:border-[var(--border-strong)]"
+            }`}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setDragActive(true);
+            }}
+            onDragLeave={(event) => {
+              event.preventDefault();
+              setDragActive(false);
+            }}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              setDragActive(false);
+              const file = event.dataTransfer.files?.[0];
               if (validateFile(file)) {
                 setSelectedFile(file);
               }
             }}
-            className="hidden"
-            id="pdf-upload-input"
-          />
-          <label htmlFor="pdf-upload-input" className="cursor-pointer">
-            <p className="text-base font-medium text-[var(--text)]">
-              {selectedFile ? selectedFile.name : "Drop a PDF here or click to select one"}
-            </p>
-            <p className="mt-3 text-sm text-[var(--text-muted)]">
-              Max 5MB. {usage?.documentCredits || 0} document credits left. Renews in {usageCountdown}.
-            </p>
-          </label>
-        </div>
+          >
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (validateFile(file)) {
+                  setSelectedFile(file);
+                }
+              }}
+              className="hidden"
+              id="pdf-upload-input"
+            />
+            <label htmlFor="pdf-upload-input" className="cursor-pointer">
+              <p className="text-base font-medium text-[var(--text)]">
+                {selectedFile ? selectedFile.name : "Drop a PDF here or click to select one"}
+              </p>
+              <p className="mt-3 text-sm text-[var(--text-muted)]">
+                Max 5MB. {usage?.documentCredits || 0} document credits left. Renews in {usageCountdown}.
+              </p>
+            </label>
+          </div>
+        )}
 
         {selectedFile ? (
           <div className="mt-4 flex flex-col gap-3 rounded-[24px] border border-[var(--border)] bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between">

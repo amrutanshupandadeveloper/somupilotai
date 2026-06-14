@@ -6,19 +6,24 @@ import { StatCard } from "../../components/ui/StatCard";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { getAdminUsage } from "../../services/adminService";
+import { LoadingSkeleton, PageHeaderSkeleton, StatGridSkeleton } from "../../components/ui/LoadingSkeleton";
 
 function AdminUsagePage() {
   const [usageData, setUsageData] = useState(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadUsage = async () => {
       try {
+        setLoading(true);
         const response = await getAdminUsage();
         setUsageData(response.data);
         setError("");
       } catch (loadError) {
         setError(loadError.response?.data?.message || "Unable to load usage overview.");
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -27,15 +32,19 @@ function AdminUsagePage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        title="Admin Usage"
-        subtitle="Track low-credit users, upload pressure, and reset windows."
-        actions={
-          <Link to="/admin/users">
-            <Button>Manage Credits</Button>
-          </Link>
-        }
-      />
+      {loading ? (
+        <PageHeaderSkeleton />
+      ) : (
+        <PageHeader
+          title="Admin Usage"
+          subtitle="Track low-credit users, upload pressure, and reset windows."
+          actions={
+            <Link to="/admin/users">
+              <Button>Manage Credits</Button>
+            </Link>
+          }
+        />
+      )}
 
       {error ? (
         <div className="rounded-3xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
@@ -43,15 +52,35 @@ function AdminUsagePage() {
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatCard title="Tracked Users" value={usageData?.items?.length ?? "--"} icon="USR" />
-        <StatCard title="Low AI Credits" value={usageData?.lowAiCreditUsers?.length ?? "--"} icon="LOW" />
-        <StatCard title="Zero AI Credits" value={usageData?.zeroAiCreditUsers?.length ?? "--"} icon="ZER" />
-      </div>
+      {loading ? (
+        <StatGridSkeleton count={3} />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatCard title="Tracked Users" value={usageData?.items?.length ?? "--"} icon="USR" />
+          <StatCard title="Low AI Credits" value={usageData?.lowAiCreditUsers?.length ?? "--"} icon="LOW" />
+          <StatCard title="Zero AI Credits" value={usageData?.zeroAiCreditUsers?.length ?? "--"} icon="ZER" />
+        </div>
+      )}
 
       <SectionCard title="Low Credit Users">
         <div className="space-y-3">
-          {usageData?.lowAiCreditUsers?.length ? (
+          {loading ? (
+            Array.from({ length: 3 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-[var(--border)] bg-white/5 px-4 py-3"
+              >
+                <div className="space-y-2">
+                  <LoadingSkeleton className="h-4 w-28 rounded-xl" />
+                  <LoadingSkeleton className="h-3 w-36 rounded-xl" />
+                </div>
+                <div className="flex gap-2">
+                  <LoadingSkeleton className="h-5 w-20 rounded-full" />
+                  <LoadingSkeleton className="h-5 w-20 rounded-full" />
+                </div>
+              </div>
+            ))
+          ) : usageData?.lowAiCreditUsers?.length ? (
             usageData.lowAiCreditUsers.map((user) => (
               <div
                 key={user.id}
@@ -79,7 +108,23 @@ function AdminUsagePage() {
 
       <SectionCard title="Upload Usage">
         <div className="space-y-3">
-          {usageData?.items?.length ? (
+          {loading ? (
+            Array.from({ length: 3 }).map((_, index) => (
+              <div
+                key={index}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-[var(--border)] bg-white/5 px-4 py-3"
+              >
+                <div className="space-y-2">
+                  <LoadingSkeleton className="h-4 w-28 rounded-xl" />
+                  <LoadingSkeleton className="h-3 w-36 rounded-xl" />
+                </div>
+                <div className="flex gap-2">
+                  <LoadingSkeleton className="h-5 w-20 rounded-full" />
+                  <LoadingSkeleton className="h-5 w-20 rounded-full" />
+                </div>
+              </div>
+            ))
+          ) : usageData?.items?.length ? (
             usageData.items.map((user) => (
               <div
                 key={user.id}

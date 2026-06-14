@@ -25,6 +25,8 @@ const sanitizeConversation = (conversation) => ({
     toolStatus: message.toolStatus,
     providerUsed: message.providerUsed,
     providerModel: message.providerModel,
+    documentId: message.documentId,
+    documentName: message.documentName,
   })),
   createdAt: conversation.createdAt,
   updatedAt: conversation.updatedAt,

@@ -1,5 +1,7 @@
 import Conversation from "../models/Conversation.js";
 import User from "../models/User.js";
+import Document from "../models/Document.js";
+import { searchRelevantChunks } from "../services/documentSearch.service.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import createHttpError from "../utils/createHttpError.js";
 import { sendSuccess } from "../utils/response.js";
@@ -224,7 +226,7 @@ const extractForgetTarget = (message) => {
 };
 
 const sendMessage = asyncHandler(async (req, res) => {
-  const { message, conversationId } = req.body;
+  const { message, conversationId, model, documentId } = req.body;
 
   validateMessage(message);
   const usage = await resetCreditsIfNeeded(req.user._id);
@@ -245,6 +247,14 @@ const sendMessage = asyncHandler(async (req, res) => {
 
   if (process.env.NODE_ENV === "development") {
     console.log("Profile injected:", !!user?.name);
+  }
+
+  let attachedDocument = null;
+  if (documentId) {
+    attachedDocument = await Document.findOne({
+      _id: documentId,
+      userId: req.user._id,
+    });
   }
 
   let conversation;
@@ -520,6 +530,18 @@ const sendMessage = asyncHandler(async (req, res) => {
       };
     }
 
+    if (attachedDocument) {
+      const relevantChunks = searchRelevantChunks(attachedDocument.chunks, trimmedMessage, 5);
+      const chunksText = relevantChunks
+        .map((chunk, idx) => `[Chunk ${idx + 1}]: ${chunk.text}`)
+        .join("\n\n");
+
+      systemPrompt += `Relevant context from the uploaded PDF "${attachedDocument.originalName}":\n${chunksText}\n\n`;
+      systemPrompt += `Rules for document QA:\n`;
+      systemPrompt += `- Rely heavily on the context from the uploaded PDF to answer the question.\n`;
+      systemPrompt += `- If the PDF doesn't contain the answer but it's general knowledge, you may still answer but mention it's outside the PDF.\n\n`;
+    }
+
     systemPrompt += `Rules:\n`;
     systemPrompt += `- If the user asks their name, answer from the user profile.\n`;
     systemPrompt += `- If the user asks what you remember, answer using saved memories.\n`;
@@ -538,6 +560,7 @@ const sendMessage = asyncHandler(async (req, res) => {
       const aiResponse = await generateAiResponse({
         messages: messagesWithContext,
         systemPrompt,
+        overrideProvider: model ? String(model).toLowerCase() : undefined,
       });
       assistantReply = aiResponse.text;
       providerUsed = aiResponse.provider;
@@ -568,6 +591,8 @@ const sendMessage = asyncHandler(async (req, res) => {
   conversation.messages.push({
     role: "user",
     content: trimmedMessage,
+    documentId: documentId || null,
+    documentName: attachedDocument ? attachedDocument.originalName : "",
     createdAt: new Date(),
   });
 

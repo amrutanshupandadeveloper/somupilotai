@@ -15,6 +15,12 @@ function ChatComposer({
   usage,
   usageCountdown,
   onUsageUpdate,
+  attachedFile,
+  setAttachedFile,
+  attachmentStatus,
+  setAttachmentStatus,
+  isUploading,
+  setIsUploading,
 }) {
   const textareaRef = useRef(null);
   const composerRef = useRef(null);
@@ -24,9 +30,6 @@ function ChatComposer({
   const [selectedModel, setSelectedModel] = useState(
     () => localStorage.getItem(MODEL_STORAGE_KEY) || "Auto"
   );
-  const [attachedFile, setAttachedFile] = useState(null);
-  const [attachmentStatus, setAttachmentStatus] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (!textareaRef.current) {
@@ -109,9 +112,12 @@ function ChatComposer({
       if (response.data?.usage && onUsageUpdate) {
         onUsageUpdate(response.data.usage);
       }
-      window.setTimeout(() => {
-        clearAttachment();
-      }, 1600);
+      setAttachedFile({
+        id: response.data._id,
+        name: file.name,
+        type: "PDF",
+      });
+      setAttachmentStatus("Attached to message");
     } catch (error) {
       setAttachmentStatus(error.response?.data?.message || "PDF upload failed");
     } finally {
@@ -120,13 +126,10 @@ function ChatComposer({
   };
 
   return (
-    <div
-      className="sticky bottom-0 z-20 border-t border-[var(--border)] px-4 pb-5 pt-4 backdrop-blur xl:px-6"
-      style={{ backgroundColor: "var(--surface-glass)" }}
-    >
+    <div className="sticky bottom-0 z-20 px-4 pb-3 pt-2 xl:px-6">
       <div className="mx-auto max-w-[860px]" ref={composerRef}>
         <div
-          className="rounded-[30px] border border-[var(--border)] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)] transition focus-within:border-[var(--border-strong)]"
+          className="rounded-[22px] border border-[var(--border)] px-3 py-2 shadow-none transition focus-within:border-[var(--border)] focus-within:shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
           style={{ backgroundColor: "var(--surface-elevated)" }}
         >
           <input
@@ -138,7 +141,7 @@ function ChatComposer({
           />
 
           {attachedFile ? (
-            <div className="mb-3 flex items-center gap-2 rounded-2xl border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-soft)]">
+            <div className="mb-2.5 flex items-center gap-2 rounded-2xl border border-[var(--border)] px-3 py-2 text-xs text-[var(--text-soft)]">
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/5">
                 {attachedFile.type === "PDF" ? "PDF" : "FILE"}
               </span>
@@ -155,15 +158,15 @@ function ChatComposer({
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-3 md:flex-row md:items-end">
-            <div className="relative flex items-end gap-3 md:flex-1">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <div className="relative flex items-center gap-2 md:flex-1">
               <button
                 type="button"
                 onClick={() => {
                   setIsAttachMenuOpen((current) => !current);
                   setIsModelMenuOpen(false);
                 }}
-                className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-white/5 text-lg text-[var(--text)] transition hover:border-[var(--border-strong)] hover:bg-white/10"
+                className="inline-flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-white/5 text-base text-[var(--text)] transition hover:border-[var(--border-strong)] hover:bg-white/10"
                 aria-label="Attach file"
                 title="Attach file"
               >
@@ -172,15 +175,19 @@ function ChatComposer({
 
               {isAttachMenuOpen ? (
                 <div
-                  className="absolute bottom-12 left-0 z-30 min-w-[180px] rounded-2xl border border-[var(--border)] p-2 shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+                  className="absolute bottom-10 left-0 z-30 min-w-[195px] rounded-2xl border border-[var(--border)] p-2 shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
                   style={{ backgroundColor: "var(--surface-elevated)" }}
                 >
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-[var(--text)] transition hover:bg-white/5"
+                    className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text)] transition hover:bg-white/5"
                   >
-                    Upload PDF
+                    <svg className="h-4 w-4 text-rose-400 mr-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 15h6M9 11h6M9 7h2" />
+                    </svg>
+                    <span>Upload PDF</span>
                   </button>
                   <button
                     type="button"
@@ -189,9 +196,12 @@ function ChatComposer({
                       setAttachedFile({ name: "Image upload", type: "IMAGE" });
                       setIsAttachMenuOpen(false);
                     }}
-                    className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-[var(--text)] transition hover:bg-white/5"
+                    className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text)] transition hover:bg-white/5"
                   >
-                    Upload Image
+                    <svg className="h-4 w-4 text-emerald-400 mr-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>Upload Image</span>
                   </button>
                   <button
                     type="button"
@@ -200,9 +210,12 @@ function ChatComposer({
                       setAttachedFile({ name: "Document upload", type: "DOC" });
                       setIsAttachMenuOpen(false);
                     }}
-                    className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-[var(--text)] transition hover:bg-white/5"
+                    className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text)] transition hover:bg-white/5"
                   >
-                    Upload Document
+                    <svg className="h-4 w-4 text-blue-400 mr-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Upload Document</span>
                   </button>
                 </div>
               ) : null}
@@ -214,13 +227,13 @@ function ChatComposer({
                 onKeyDown={handleKeyDown}
                 rows={1}
                 placeholder="Ask anything..."
-                className="min-h-[44px] flex-1 resize-none border-0 bg-transparent px-1 py-2 text-sm leading-7 text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
+                className="min-h-[34px] flex-1 resize-none border-0 bg-transparent px-1 py-1 text-sm leading-5 text-[var(--text)] outline-none ring-0 placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0"
                 disabled={disabled}
                 aria-label="Message SomuPilot"
               />
             </div>
 
-            <div className="flex items-center justify-between gap-3 md:justify-end">
+            <div className="flex items-center justify-between gap-2 md:justify-end">
               <div className="relative">
                 <button
                   type="button"
@@ -228,7 +241,7 @@ function ChatComposer({
                     setIsModelMenuOpen((current) => !current);
                     setIsAttachMenuOpen(false);
                   }}
-                  className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--border)] bg-white/5 px-3 text-xs font-medium text-[var(--text)] transition hover:border-[var(--border-strong)] hover:bg-white/10"
+                  className="inline-flex h-[34px] items-center gap-2 rounded-full border border-[var(--border)] bg-white/5 px-3 text-xs font-medium text-[var(--text)] transition hover:border-[var(--border-strong)] hover:bg-white/10"
                   aria-label="Select model"
                 >
                   <span>{selectedModel}</span>
@@ -237,7 +250,7 @@ function ChatComposer({
 
                 {isModelMenuOpen ? (
                   <div
-                    className="absolute bottom-12 right-0 z-30 min-w-[160px] rounded-2xl border border-[var(--border)] p-2 shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
+                  className="absolute bottom-10 right-0 z-30 min-w-[160px] rounded-2xl border border-[var(--border)] p-2 shadow-[0_18px_40px_rgba(0,0,0,0.22)]"
                     style={{ backgroundColor: "var(--surface-elevated)" }}
                   >
                     {MODEL_OPTIONS.map((model) => (
@@ -262,7 +275,7 @@ function ChatComposer({
                 type="button"
                 onClick={onSubmit}
                 disabled={!canSend}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-base font-semibold text-slate-950 transition disabled:cursor-not-allowed disabled:bg-[var(--surface-elevated)] disabled:text-[var(--text-muted)]"
+                className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full text-sm font-semibold text-slate-950 transition disabled:cursor-not-allowed disabled:bg-[var(--surface-elevated)] disabled:text-[var(--text-muted)]"
                 style={canSend ? { backgroundColor: "var(--accent)" } : undefined}
                 aria-label={isSending ? "Sending message" : "Send message"}
               >
@@ -275,24 +288,29 @@ function ChatComposer({
             </div>
           </div>
 
-          <div className="mt-3 flex flex-col gap-2 border-t border-[var(--border)] px-1 pt-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
+          <div className="mt-2 flex items-center justify-between gap-3 border-t border-[var(--border)] px-1 pt-2">
+            <div className="min-w-0 flex-1 text-left">
               {usage?.aiCredits === 0 ? (
-                <p className="text-xs text-amber-300">Credits finished. Renews soon.</p>
+                <p className="truncate text-[11px] text-amber-300">Credits finished. Renews soon.</p>
               ) : helperText ? (
-                <p className="text-xs text-[var(--text-muted)]">{helperText}</p>
-              ) : null}
-              <p className="text-[11px] text-[var(--text-muted)]">
-                SomuPilot can make mistakes. Verify important information.
-              </p>
+                <p className="truncate text-[11px] text-[var(--text-muted)]">{helperText}</p>
+              ) : (
+                <p className="truncate text-[11px] text-[var(--text-muted)]">&nbsp;</p>
+              )}
             </div>
 
+            <p className="hidden flex-1 text-center text-[10px] text-[var(--text-muted)] sm:block">
+              SomuPilot can make mistakes. Verify important information.
+            </p>
+
             {usage ? (
-              <CreditBadge
-                credits={usage.aiCredits}
-                maxCredits={usage.maxAiCredits}
-                countdown={usageCountdown}
-              />
+              <div className="flex min-w-0 flex-1 justify-end">
+                <CreditBadge
+                  credits={usage.aiCredits}
+                  maxCredits={usage.maxAiCredits}
+                  countdown={usageCountdown}
+                />
+              </div>
             ) : null}
           </div>
         </div>

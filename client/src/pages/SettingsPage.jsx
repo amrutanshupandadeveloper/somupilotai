@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useOutletContext } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../context/ThemeContext";
 import { getAiProviderStatus } from "../services/aiService";
@@ -8,6 +9,12 @@ import { StatCard } from "../components/ui/StatCard";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
+import {
+  LoadingSkeleton,
+  PageHeaderSkeleton,
+  StatGridSkeleton,
+} from "../components/ui/LoadingSkeleton";
+import UserTopBarActions from "../components/UserTopBarActions";
 
 const formatProviderLabel = (provider) =>
   provider === "openrouter"
@@ -17,15 +24,18 @@ const formatProviderLabel = (provider) =>
       : provider.charAt(0).toUpperCase() + provider.slice(1);
 
 function SettingsPage() {
+  const { setTopBarConfig, resetTopBarConfig } = useOutletContext();
   const { user, usage, logout } = useAuth();
   const { theme, setTheme, toggleTheme } = useTheme();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [providerStatus, setProviderStatus] = useState(null);
   const [providerError, setProviderError] = useState("");
+  const [isLoadingProviderStatus, setIsLoadingProviderStatus] = useState(true);
 
   useEffect(() => {
     const loadProviderStatus = async () => {
       try {
+        setIsLoadingProviderStatus(true);
         const response = await getAiProviderStatus();
         setProviderStatus(response.data);
         setProviderError("");
@@ -33,11 +43,24 @@ function SettingsPage() {
         setProviderError(
           error.response?.data?.message || "Unable to load AI provider status right now."
         );
+      } finally {
+        setIsLoadingProviderStatus(false);
       }
     };
 
     loadProviderStatus();
   }, []);
+
+  useEffect(() => {
+    setTopBarConfig({
+      title: "Settings",
+      subtitle: "SomuPilot AI",
+      showUsage: false,
+      rightSlot: <UserTopBarActions usage={usage} />,
+    });
+
+    return () => resetTopBarConfig();
+  }, [usage]);
 
   const handleLogout = async () => {
     await logout();
@@ -46,10 +69,14 @@ function SettingsPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        title="Settings"
-        subtitle="Manage your profile, theme, AI provider visibility, and daily limits."
-      />
+      {isLoadingProviderStatus ? (
+        <PageHeaderSkeleton />
+      ) : (
+        <PageHeader
+          title="Settings"
+          subtitle="Manage your profile, theme, AI provider visibility, and daily limits."
+        />
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <SectionCard title="Profile">
@@ -122,96 +149,132 @@ function SettingsPage() {
             </div>
           ) : null}
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-[24px] border border-[var(--border)] bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.25em] text-[var(--text-muted)]">Current mode</p>
-              <p className="mt-3 text-lg font-semibold text-[var(--text)]">
-                {providerStatus?.mode === "auto"
-                  ? "Auto fallback"
-                  : formatProviderLabel(providerStatus?.mode || "auto")}
-              </p>
-            </div>
-            <div className="rounded-[24px] border border-[var(--border)] bg-white/5 p-4">
-              <p className="text-xs uppercase tracking-[0.25em] text-[var(--text-muted)]">Fallback order</p>
-              <p className="mt-3 text-sm text-[var(--text-soft)]">
-                {providerStatus?.fallbackOrder?.length
-                  ? providerStatus.fallbackOrder.map(formatProviderLabel).join(" -> ")
-                  : "Not available"}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {providerStatus?.providers
-              ? Object.entries(providerStatus.providers).map(([provider, details]) => (
+          {isLoadingProviderStatus ? (
+            <>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-[24px] border border-[var(--border)] bg-white/5 p-4">
+                  <LoadingSkeleton className="h-3 w-28 rounded-full" />
+                  <LoadingSkeleton className="mt-3 h-7 w-36 rounded-2xl" />
+                </div>
+                <div className="rounded-[24px] border border-[var(--border)] bg-white/5 p-4">
+                  <LoadingSkeleton className="h-3 w-28 rounded-full" />
+                  <LoadingSkeleton className="mt-3 h-5 w-full rounded-xl" />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, index) => (
                   <div
-                    key={provider}
+                    key={index}
                     className="rounded-[24px] border border-[var(--border)] bg-white/5 p-4"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-[var(--text)]">
-                        {formatProviderLabel(provider)}
-                      </p>
-                      <Badge
-                        variant={
-                          details.local ? "info" : details.configured ? "success" : "warning"
-                        }
-                      >
-                        {details.local
-                          ? "Local"
-                          : details.configured
-                            ? "Configured"
-                            : "Not configured"}
-                      </Badge>
+                      <LoadingSkeleton className="h-4 w-24 rounded-xl" />
+                      <LoadingSkeleton className="h-5 w-20 rounded-full" />
                     </div>
-                    <p className="mt-3 text-xs leading-6 text-[var(--text-muted)]">
-                      Model: {details.model || "Not set"}
-                    </p>
-                    {details.local ? (
-                      <p className="mt-2 text-xs leading-6 text-[var(--text-muted)]">
-                        Endpoint: {details.baseUrl}
-                      </p>
-                    ) : null}
+                    <LoadingSkeleton className="mt-3 h-3 w-full rounded-xl" />
+                    <LoadingSkeleton className="mt-2 h-3 w-5/6 rounded-xl" />
                   </div>
-                ))
-              : null}
-          </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-[24px] border border-[var(--border)] bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.25em] text-[var(--text-muted)]">Current mode</p>
+                  <p className="mt-3 text-lg font-semibold text-[var(--text)]">
+                    {providerStatus?.mode === "auto"
+                      ? "Auto fallback"
+                      : formatProviderLabel(providerStatus?.mode || "auto")}
+                  </p>
+                </div>
+                <div className="rounded-[24px] border border-[var(--border)] bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.25em] text-[var(--text-muted)]">Fallback order</p>
+                  <p className="mt-3 text-sm text-[var(--text-soft)]">
+                    {providerStatus?.fallbackOrder?.length
+                      ? providerStatus.fallbackOrder.map(formatProviderLabel).join(" -> ")
+                      : "Not available"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {providerStatus?.providers
+                  ? Object.entries(providerStatus.providers).map(([provider, details]) => (
+                      <div
+                        key={provider}
+                        className="rounded-[24px] border border-[var(--border)] bg-white/5 p-4"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-[var(--text)]">
+                            {formatProviderLabel(provider)}
+                          </p>
+                          <Badge
+                            variant={
+                              details.local ? "info" : details.configured ? "success" : "warning"
+                            }
+                          >
+                            {details.local
+                              ? "Local"
+                              : details.configured
+                                ? "Configured"
+                                : "Not configured"}
+                          </Badge>
+                        </div>
+                        <p className="mt-3 text-xs leading-6 text-[var(--text-muted)]">
+                          Model: {details.model || "Not set"}
+                        </p>
+                        {details.local ? (
+                          <p className="mt-2 text-xs leading-6 text-[var(--text-muted)]">
+                            Endpoint: {details.baseUrl}
+                          </p>
+                        ) : null}
+                      </div>
+                    ))
+                  : null}
+              </div>
+            </>
+          )}
         </div>
       </SectionCard>
 
       <SectionCard title="Credit Limits">
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <StatCard
-            title="AI Credits"
-            value={usage?.aiCredits || 0}
-            subtitle={`Max ${usage?.maxAiCredits || 0}`}
-            icon="AI"
-          />
-          <StatCard
-            title="Document Credits"
-            value={usage?.documentCredits || 0}
-            subtitle={`Max ${usage?.maxDocumentCredits || 0}`}
-            icon="PDF"
-          />
-          <StatCard
-            title="PDF Uploads"
-            value={usage?.pdfUploadsToday || 0}
-            subtitle={`Max ${usage?.maxPdfUploadsPerDay || 0} daily`}
-            icon="UP"
-          />
-          <StatCard
-            title="Pictures"
-            value={usage?.pictureUploadsToday || 0}
-            subtitle={`Max ${usage?.maxPictureUploadsPerDay || 0} daily`}
-            icon="IMG"
-          />
-          <StatCard
-            title="Videos"
-            value={usage?.videoUploadsToday || 0}
-            subtitle={`Max ${usage?.maxVideoUploadsPerDay || 0} daily`}
-            icon="VID"
-          />
-        </div>
+        {isLoadingProviderStatus ? (
+          <StatGridSkeleton count={5} />
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <StatCard
+              title="AI Credits"
+              value={usage?.aiCredits || 0}
+              subtitle={`Max ${usage?.maxAiCredits || 0}`}
+              icon="AI"
+            />
+            <StatCard
+              title="Document Credits"
+              value={usage?.documentCredits || 0}
+              subtitle={`Max ${usage?.maxDocumentCredits || 0}`}
+              icon="PDF"
+            />
+            <StatCard
+              title="PDF Uploads"
+              value={usage?.pdfUploadsToday || 0}
+              subtitle={`Max ${usage?.maxPdfUploadsPerDay || 0} daily`}
+              icon="UP"
+            />
+            <StatCard
+              title="Pictures"
+              value={usage?.pictureUploadsToday || 0}
+              subtitle={`Max ${usage?.maxPictureUploadsPerDay || 0} daily`}
+              icon="IMG"
+            />
+            <StatCard
+              title="Videos"
+              value={usage?.videoUploadsToday || 0}
+              subtitle={`Max ${usage?.maxVideoUploadsPerDay || 0} daily`}
+              icon="VID"
+            />
+          </div>
+        )}
       </SectionCard>
 
       <SectionCard title="Danger Zone">

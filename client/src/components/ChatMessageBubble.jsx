@@ -29,16 +29,7 @@ function ChatMessageBubble({ message, currentUserName = "You" }) {
 
   return (
     <div className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
-      {!isUser ? (
-        <div
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-[var(--border)] text-xs font-semibold text-[var(--text)]"
-          style={{ backgroundColor: "var(--surface-elevated)" }}
-        >
-          S
-        </div>
-      ) : null}
-
-      <div className={`max-w-full ${isUser ? "order-1" : ""}`}>
+      <div className="max-w-full">
         <div
           className={`rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${
             isUser
@@ -61,6 +52,20 @@ function ChatMessageBubble({ message, currentUserName = "You" }) {
           ) : null}
 
           <p className="whitespace-pre-wrap break-words">{message.content}</p>
+
+          {message.documentName ? (
+            <div className={`mt-2.5 flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs w-fit ${
+              isUser
+                ? "bg-slate-950/15 border border-slate-950/10 text-slate-900"
+                : "bg-white/5 border border-[var(--border)] text-[var(--text-soft)]"
+            }`}>
+              <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 15h6M9 11h6M9 7h2" />
+              </svg>
+              <span className="font-medium truncate max-w-[200px]">{message.documentName}</span>
+            </div>
+          ) : null}
         </div>
 
         {!isUser && providerUsed ? (
@@ -69,20 +74,6 @@ function ChatMessageBubble({ message, currentUserName = "You" }) {
           </p>
         ) : null}
       </div>
-
-      {isUser ? (
-        <div
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-[var(--border)] text-xs font-semibold text-[var(--text)]"
-          style={{ backgroundColor: "var(--surface-elevated)" }}
-        >
-          {(currentUserName || "U")
-            .split(" ")
-            .slice(0, 2)
-            .map((part) => part[0] || "")
-            .join("")
-            .toUpperCase()}
-        </div>
-      ) : null}
     </div>
   );
 }
