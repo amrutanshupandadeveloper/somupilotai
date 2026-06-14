@@ -67,6 +67,13 @@ app.get("/", (_req, res) => {
   });
 });
 
+app.get("/api", (_req, res) => {
+  res.json({
+    success: true,
+    message: "Welcome to SomuPilot AI API base endpoint",
+  });
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/chat", chatRoutes);
