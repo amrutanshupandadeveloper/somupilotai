@@ -2,7 +2,7 @@ import Document from "../models/Document.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import createHttpError from "../utils/createHttpError.js";
 import { sendSuccess } from "../utils/response.js";
-import { generateAiReply } from "../services/aiProvider.service.js";
+import { generateAiResponse } from "../services/aiProvider.service.js";
 import {
   consumeDocumentCredit,
   consumePdfUpload,
@@ -12,7 +12,7 @@ import {
 import { searchRelevantChunks } from "../services/documentSearch.service.js";
 import fs from "fs";
 import path from "path";
-import pdf from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 
 const chunkText = (text, wordsPerChunk = 600, overlapWords = 100) => {
   const words = text.split(/\s+/).filter((word) => word.length > 0);
@@ -65,7 +65,8 @@ const uploadDocument = asyncHandler(async (req, res) => {
 
   try {
     const dataBuffer = fs.readFileSync(req.file.path);
-    const data = await pdf(dataBuffer);
+    const parser = new PDFParse({ data: dataBuffer });
+    const data = await parser.getText();
     const extractedText = data.text;
 
     if (!extractedText || extractedText.trim().length === 0) {
@@ -179,6 +180,7 @@ const askDocument = asyncHandler(async (req, res) => {
       documentCredits: usage.documentCredits,
       maxDocumentCredits: usage.maxDocumentCredits,
       nextResetAt: usage.nextResetAt,
+      usage: sanitizeUsage(usage),
     });
   }
 
@@ -207,12 +209,14 @@ Rules:
       { role: "user", content: question },
     ];
 
-    const answer = await generateAiReply({ messages });
+    const aiResponse = await generateAiResponse({ messages, systemPrompt });
 
     const updatedUsage = await consumeDocumentCredit(req.user._id);
 
     return sendSuccess(res, "Answer generated successfully", {
-      answer,
+      answer: aiResponse.text,
+      providerUsed: aiResponse.provider,
+      providerModel: aiResponse.model,
       sources: relevantChunks.map((chunk) => ({
         index: chunk.index,
         text: chunk.text.substring(0, 200) + "...",
@@ -220,10 +224,18 @@ Rules:
       usage: sanitizeUsage(updatedUsage),
     });
   } catch (error) {
+    const currentUsage = await resetCreditsIfNeeded(req.user._id);
+
     if (error.statusCode) {
-      throw createHttpError(error.statusCode, error.message, error.data || null);
+      throw createHttpError(error.statusCode, error.message, {
+        ...(error.data || {}),
+        usage: sanitizeUsage(currentUsage),
+      });
     }
-    throw createHttpError(503, "AI service is temporarily unavailable.");
+    throw createHttpError(503, "AI service is temporarily unavailable. Please try again.", {
+      errorType: "service_unavailable",
+      usage: sanitizeUsage(currentUsage),
+    });
   }
 });
 

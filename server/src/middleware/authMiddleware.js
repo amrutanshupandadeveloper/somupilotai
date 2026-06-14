@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import createHttpError from "../utils/createHttpError.js";
+import { ensureUserIsActive } from "../services/authService.js";
 
 const authMiddleware = asyncHandler(async (req, _res, next) => {
   const authorization = req.headers.authorization;
@@ -20,6 +21,7 @@ const authMiddleware = asyncHandler(async (req, _res, next) => {
       throw createHttpError(401, "Invalid authentication token");
     }
 
+    ensureUserIsActive(user);
     req.user = user;
     next();
   } catch (error) {

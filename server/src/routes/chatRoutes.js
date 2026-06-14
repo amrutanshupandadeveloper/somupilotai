@@ -6,6 +6,7 @@ import {
   getConversation,
   getConversations,
   sendMessage,
+  toggleConversationPin,
   updateConversationTitle,
 } from "../controllers/chatController.js";
 
@@ -27,5 +28,6 @@ router.get("/conversations", getConversations);
 router.get("/conversations/:id", getConversation);
 router.delete("/conversations/:id", deleteConversation);
 router.patch("/conversations/:id/title", updateConversationTitle);
+router.patch("/conversations/:id/pin", toggleConversationPin);
 
 export default router;

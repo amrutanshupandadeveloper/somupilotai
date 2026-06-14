@@ -24,10 +24,20 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin"],
       default: "user",
     },
+    status: {
+      type: String,
+      enum: ["active", "blocked"],
+      default: "active",
+      index: true,
+    },
     avatarUrl: {
       type: String,
       default: "",
       trim: true,
+    },
+    lastLoginAt: {
+      type: Date,
+      default: null,
     },
   },
   {

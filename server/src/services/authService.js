@@ -10,10 +10,18 @@ const sanitizeUser = (user) => ({
   name: user.name,
   email: user.email,
   role: user.role,
+  status: user.status || "active",
   avatarUrl: user.avatarUrl || "",
+  lastLoginAt: user.lastLoginAt || null,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 });
+
+const ensureUserIsActive = (user) => {
+  if (user?.status === "blocked") {
+    throw createHttpError(403, "Your account has been blocked. Please contact the administrator.");
+  }
+};
 
 const validateRegisterInput = ({ name, email, password }) => {
   if (!name?.trim()) {
@@ -72,11 +80,16 @@ const loginUser = async ({ email, password }) => {
     throw createHttpError(401, "Invalid email or password");
   }
 
+  ensureUserIsActive(user);
+
   const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
   if (!isPasswordValid) {
     throw createHttpError(401, "Invalid email or password");
   }
+
+  user.lastLoginAt = new Date();
+  await user.save();
 
   return {
     token: generateToken(user._id.toString()),
@@ -84,4 +97,4 @@ const loginUser = async ({ email, password }) => {
   };
 };
 
-export { loginUser, registerUser, sanitizeUser };
+export { ensureUserIsActive, loginUser, registerUser, sanitizeUser };

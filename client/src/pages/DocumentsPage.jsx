@@ -1,9 +1,17 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { documentService } from "../services/documentService";
+import { getFriendlyAiErrorMessage } from "../utils/aiError";
+import { PageHeader } from "../components/ui/PageHeader";
+import { SectionCard } from "../components/ui/SectionCard";
+import { Button } from "../components/ui/Button";
+import { Badge } from "../components/ui/Badge";
+import { EmptyState } from "../components/ui/EmptyState";
+import { ListSkeleton } from "../components/ui/LoadingSkeleton";
+import { ConfirmModal } from "../components/ui/ConfirmModal";
 
 function DocumentsPage() {
-  const { user, usage, usageCountdown } = useAuth();
+  const { usage, usageCountdown, setUsage } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -14,12 +22,14 @@ function DocumentsPage() {
   const [asking, setAsking] = useState(false);
   const [answer, setAnswer] = useState(null);
   const [showAskPanel, setShowAskPanel] = useState(false);
+  const [askError, setAskError] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const fetchDocuments = async () => {
     try {
       setLoading(true);
       const response = await documentService.getDocuments();
-      setDocuments(response.data);
+      setDocuments(response.data || []);
     } catch (error) {
       console.error("Failed to fetch documents:", error);
     } finally {
@@ -31,57 +41,37 @@ function DocumentsPage() {
     fetchDocuments();
   }, []);
 
-  const handleFileSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.type !== "application/pdf") {
-        alert("Only PDF files are allowed");
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File size exceeds 5MB limit");
-        return;
-      }
-      setSelectedFile(file);
+  const validateFile = (file) => {
+    if (!file) {
+      return false;
     }
-  };
 
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
+    if (file.type !== "application/pdf") {
+      alert("Only PDF files are allowed");
+      return false;
     }
-  };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      if (file.type !== "application/pdf") {
-        alert("Only PDF files are allowed");
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File size exceeds 5MB limit");
-        return;
-      }
-      setSelectedFile(file);
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size exceeds 5MB limit");
+      return false;
     }
+
+    return true;
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      return;
+    }
 
     try {
       setUploading(true);
-      await documentService.uploadDocument(selectedFile);
+      const response = await documentService.uploadDocument(selectedFile);
+      if (response.data?.usage) {
+        setUsage(response.data.usage);
+      }
       setSelectedFile(null);
-      fetchDocuments();
+      await fetchDocuments();
     } catch (error) {
       console.error("Failed to upload document:", error);
       alert(error.response?.data?.message || "Failed to upload document");
@@ -90,11 +80,11 @@ function DocumentsPage() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this document?")) return;
+  const confirmDelete = async () => {
     try {
-      await documentService.deleteDocument(id);
-      fetchDocuments();
+      await documentService.deleteDocument(deleteConfirm);
+      setDeleteConfirm(null);
+      await fetchDocuments();
     } catch (error) {
       console.error("Failed to delete document:", error);
       alert("Failed to delete document");
@@ -102,160 +92,170 @@ function DocumentsPage() {
   };
 
   const handleAsk = async () => {
-    if (!question.trim() || !selectedDocument) return;
+    if (!question.trim() || !selectedDocument) {
+      return;
+    }
 
     try {
       setAsking(true);
+      setAskError("");
       const response = await documentService.askDocument(selectedDocument._id, question);
       setAnswer(response.data);
+      if (response.data?.usage) {
+        setUsage(response.data.usage);
+      }
     } catch (error) {
-      console.error("Failed to ask document:", error);
-      alert(error.response?.data?.message || "Failed to get answer");
+      const usageData = error.response?.data?.usage || error.response?.data?.data?.usage;
+
+      if (usageData?.nextResetAt) {
+        setUsage((currentUsage) => ({
+          ...(currentUsage || {}),
+          ...usageData,
+        }));
+      }
+
+      setAskError(
+        getFriendlyAiErrorMessage(
+          error,
+          "AI could not respond right now. Please try again."
+        )
+      );
     } finally {
       setAsking(false);
     }
   };
 
-  const openAskPanel = (document) => {
-    setSelectedDocument(document);
-    setQuestion("");
-    setAnswer(null);
-    setShowAskPanel(true);
-  };
-
-  const closeAskPanel = () => {
-    setSelectedDocument(null);
-    setQuestion("");
-    setAnswer(null);
-    setShowAskPanel(false);
-  };
-
   const formatFileSize = (bytes) => {
-    if (bytes === 0) return "0 Bytes";
+    if (bytes === 0) {
+      return "0 Bytes";
+    }
+
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
+    return `${Math.round((bytes / Math.pow(k, i)) * 100) / 100} ${sizes[i]}`;
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold text-white">Documents</h1>
-          <p className="mt-2 text-sm text-slate-400">
-            Upload PDFs and ask questions from them
-          </p>
-        </div>
-        {usage && (
-          <div className="flex gap-3">
-            <div className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-slate-300">
-              PDF uploads today: {usage.pdfUploadsToday}/{usage.maxPdfUploadsPerDay}
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-slate-300">
-              Document questions: {usage.documentCredits}/{usage.maxDocumentCredits}
-            </div>
+      <PageHeader
+        title="Documents"
+        subtitle="Upload PDFs, keep source material organized, and ask precise questions grounded in your files."
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="default">
+              PDF {usage?.pdfUploadsToday || 0}/{usage?.maxPdfUploadsPerDay || 0}
+            </Badge>
+            <Badge variant="info">
+              Q&A {usage?.documentCredits || 0}/{usage?.maxDocumentCredits || 0}
+            </Badge>
           </div>
-        )}
-      </div>
+        }
+      />
 
-      <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Upload PDF</h2>
+      <SectionCard title="Upload PDF">
         <div
-          className={`border-2 border-dashed rounded-xl p-8 text-center transition ${
+          className={`rounded-[28px] border-2 border-dashed p-8 text-center transition ${
             dragActive
-              ? "border-sky-400 bg-sky-400/5"
-              : "border-white/20 hover:border-white/30"
+              ? "border-emerald-400/45 bg-emerald-500/8"
+              : "border-[var(--border)] bg-white/5 hover:border-[var(--border-strong)]"
           }`}
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
+          onDragEnter={(event) => {
+            event.preventDefault();
+            setDragActive(true);
+          }}
+          onDragLeave={(event) => {
+            event.preventDefault();
+            setDragActive(false);
+          }}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragActive(false);
+            const file = event.dataTransfer.files?.[0];
+            if (validateFile(file)) {
+              setSelectedFile(file);
+            }
+          }}
         >
           <input
             type="file"
             accept=".pdf"
-            onChange={handleFileSelect}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (validateFile(file)) {
+                setSelectedFile(file);
+              }
+            }}
             className="hidden"
-            id="file-input"
+            id="pdf-upload-input"
           />
-          <label
-            htmlFor="file-input"
-            className="cursor-pointer"
-          >
-            <p className="text-sm text-slate-300">
-              {selectedFile ? selectedFile.name : "Drag & drop PDF here or click to select"}
+          <label htmlFor="pdf-upload-input" className="cursor-pointer">
+            <p className="text-base font-medium text-[var(--text)]">
+              {selectedFile ? selectedFile.name : "Drop a PDF here or click to select one"}
             </p>
-            <p className="mt-2 text-xs text-slate-500">
-              Max file size: 5MB • PDF only
+            <p className="mt-3 text-sm text-[var(--text-muted)]">
+              Max 5MB. {usage?.documentCredits || 0} document credits left. Renews in {usageCountdown}.
             </p>
           </label>
         </div>
-        {selectedFile && (
-          <div className="mt-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-slate-300">{selectedFile.name}</span>
-              <span className="text-xs text-slate-500">
+
+        {selectedFile ? (
+          <div className="mt-4 flex flex-col gap-3 rounded-[24px] border border-[var(--border)] bg-white/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-[var(--text)]">{selectedFile.name}</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
                 {formatFileSize(selectedFile.size)}
-              </span>
+              </p>
             </div>
-            <button
-              type="button"
-              onClick={handleUpload}
-              disabled={uploading}
-              className="rounded-xl bg-sky-400 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400/90 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              {uploading ? "Uploading..." : "Upload"}
-            </button>
+            <Button onClick={handleUpload} disabled={uploading}>
+              {uploading ? "Uploading..." : "Upload PDF"}
+            </Button>
           </div>
-        )}
-      </div>
+        ) : null}
+      </SectionCard>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <p className="text-slate-400">Loading documents...</p>
-        </div>
+        <ListSkeleton count={6} />
       ) : documents.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-900/70 py-12">
-          <p className="text-lg font-medium text-white">No documents uploaded yet</p>
-          <p className="mt-2 text-sm text-slate-400">
-            Upload a PDF to ask questions from it
-          </p>
-        </div>
+        <EmptyState
+          icon="D"
+          title="No documents uploaded yet"
+          description="Upload your first PDF to start asking grounded questions from source material."
+        />
       ) : (
-        <div className="space-y-4">
-          {documents.map((doc) => (
-            <article
-              key={doc._id}
-              className="rounded-2xl border border-white/10 bg-slate-900/70 p-6 hover:border-white/20 transition"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white">
-                    {doc.originalName}
+        <div className="grid gap-4 xl:grid-cols-2">
+          {documents.map((document) => (
+            <article key={document._id} className="app-card rounded-[28px] p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <h3 className="truncate text-lg font-semibold text-[var(--text)]">
+                    {document.originalName}
                   </h3>
-                  <div className="mt-2 flex items-center gap-4 text-sm text-slate-400">
-                    <span>{formatFileSize(doc.fileSize)}</span>
-                    <span>{doc.chunksCount} chunks</span>
-                    <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+                    <span>{formatFileSize(document.fileSize)}</span>
+                    <Badge variant="success">{document.chunksCount} chunks</Badge>
+                    <span>{new Date(document.uploadedAt).toLocaleDateString()}</span>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => openAskPanel(doc)}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedDocument(document);
+                      setQuestion("");
+                      setAnswer(null);
+                      setAskError("");
+                      setShowAskPanel(true);
+                    }}
                     disabled={usage?.documentCredits === 0}
-                    className="rounded-xl border border-sky-400/30 bg-sky-400/10 px-4 py-2 text-sm font-medium text-sky-300 hover:border-sky-400/50 hover:bg-sky-400/20 disabled:opacity-50 disabled:cursor-not-allowed transition"
                   >
                     Ask
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(doc._id)}
-                    className="rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-2 text-sm font-medium text-red-300 hover:border-red-400/50 hover:bg-red-400/20 transition"
-                  >
+                  </Button>
+                  <Button size="sm" variant="danger" onClick={() => setDeleteConfirm(document._id)}>
                     Delete
-                  </button>
+                  </Button>
                 </div>
               </div>
             </article>
@@ -263,83 +263,104 @@ function DocumentsPage() {
         </div>
       )}
 
-      {showAskPanel && selectedDocument && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur">
-          <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-slate-900 p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-white">
-                Ask: {selectedDocument.originalName}
-              </h2>
-              <button
-                type="button"
-                onClick={closeAskPanel}
-                className="text-slate-400 hover:text-white transition"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="space-y-4">
+      {showAskPanel && selectedDocument ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/84 p-4 backdrop-blur">
+          <div className="app-card w-full max-w-3xl rounded-[32px] p-6 sm:p-7">
+            <div className="mb-6 flex items-center justify-between gap-3">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Your question
-                </label>
-                <textarea
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-sky-400/50 focus:outline-none resize-none"
-                  placeholder="What do you want to know about this document?"
-                />
+                <p className="app-kicker">Document Q&A</p>
+                <h2 className="mt-2 text-2xl font-semibold text-[var(--text)]">
+                  {selectedDocument.originalName}
+                </h2>
               </div>
-              {usage?.documentCredits === 0 && (
-                <p className="text-sm text-red-400">
-                  Document credits finished. Credits will renew soon.
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={handleAsk}
-                disabled={!question.trim() || asking || usage?.documentCredits === 0}
-                className="w-full rounded-xl bg-sky-400 px-4 py-3 text-sm font-medium text-slate-950 hover:bg-sky-400/90 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedDocument(null);
+                  setQuestion("");
+                  setAnswer(null);
+                  setAskError("");
+                  setShowAskPanel(false);
+                }}
               >
-                {asking ? "Getting answer..." : "Ask"}
-              </button>
-              {answer && (
-                <div className="rounded-xl border border-white/10 bg-slate-950/50 p-4">
-                  <h3 className="text-sm font-semibold text-white mb-2">Answer</h3>
-                  <p className="text-sm text-slate-300 whitespace-pre-wrap">
+                Close
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <textarea
+                value={question}
+                onChange={(event) => setQuestion(event.target.value)}
+                rows={4}
+                className="app-input min-h-[120px] resize-none"
+                placeholder="Ask a question grounded in this document"
+              />
+
+              {usage?.documentCredits === 0 ? (
+                <p className="text-sm text-rose-300">
+                  Document credits are finished. Please wait until they renew.
+                </p>
+              ) : null}
+
+              {askError ? (
+                <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                  {askError}
+                </div>
+              ) : null}
+
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-[var(--text-muted)]">
+                  {usage?.documentCredits || 0}/{usage?.maxDocumentCredits || 0} document credits
+                </p>
+                <Button onClick={handleAsk} disabled={!question.trim() || asking || usage?.documentCredits === 0}>
+                  {asking ? "Thinking..." : "Ask document"}
+                </Button>
+              </div>
+
+              {answer ? (
+                <div className="rounded-[28px] border border-[var(--border)] bg-white/5 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-base font-semibold text-[var(--text)]">Answer</h3>
+                    {answer.providerUsed ? (
+                      <Badge variant="info">
+                        {answer.providerUsed.charAt(0).toUpperCase() + answer.providerUsed.slice(1)}
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-[var(--text-soft)]">
                     {answer.answer}
                   </p>
-                  {answer.sources && answer.sources.length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="text-xs font-semibold text-slate-400 mb-2">
-                        Sources
-                      </h4>
-                      <div className="space-y-2">
-                        {answer.sources.map((source, index) => (
-                          <div
-                            key={index}
-                            className="rounded-lg border border-white/5 bg-slate-900/50 p-3"
-                          >
-                            <p className="text-xs text-slate-400">
-                              {source.text}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
+
+                  {answer.sources?.length ? (
+                    <div className="mt-5 space-y-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--text-muted)]">
+                        Source snippets
+                      </p>
+                      {answer.sources.map((source, index) => (
+                        <div
+                          key={`${source.index}-${index}`}
+                          className="rounded-[22px] border border-[var(--border)] bg-[color:var(--surface)]/60 p-4 text-xs leading-6 text-[var(--text-muted)]"
+                        >
+                          {source.text}
+                        </div>
+                      ))}
                     </div>
-                  )}
-                  {answer.usage && (
-                    <div className="mt-4 text-xs text-slate-500">
-                      Document credits remaining: {answer.usage.documentCredits}
-                    </div>
-                  )}
+                  ) : null}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
-      )}
+      ) : null}
+
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        title="Delete Document"
+        message="Are you sure you want to delete this document? This action cannot be undone."
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </div>
   );
 }

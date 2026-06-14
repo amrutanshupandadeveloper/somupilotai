@@ -3,7 +3,7 @@ import User from "../models/User.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import createHttpError from "../utils/createHttpError.js";
 import { sendSuccess } from "../utils/response.js";
-import { generateAiReply } from "../services/aiProvider.service.js";
+import { generateAiResponse } from "../services/aiProvider.service.js";
 import {
   appendMessage,
   createConversationPreview,
@@ -28,7 +28,7 @@ import {
   searchMemoryTool,
   searchNotesTool,
 } from "../services/agentTools.service.js";
-import { getRelevantMemories } from "../services/memory.service.js";
+import { getRelevantMemories, listMemories } from "../services/memory.service.js";
 
 const detectToolIntent = (message) => {
   const lowerMessage = message.toLowerCase();
@@ -236,22 +236,20 @@ const sendMessage = asyncHandler(async (req, res) => {
       nextResetAt: usage.nextResetAt,
       timeUntilReset: sanitizeUsage(usage).timeUntilReset,
       resetIntervalHours: usage.resetIntervalHours,
+      usage: sanitizeUsage(usage),
     });
   }
 
   // Fetch user profile (name, email only - no sensitive data)
   const user = await User.findById(req.user._id).select("name email role");
-  
+
   if (process.env.NODE_ENV === "development") {
-    console.log("Profile injected:", !!user);
-    if (user) {
-      console.log("User name:", user.name);
-    }
+    console.log("Profile injected:", !!user?.name);
   }
 
   let conversation;
   const trimmedMessage = message.trim();
-  const provider = (process.env.AI_PROVIDER || "gemini").toLowerCase();
+  const provider = (process.env.AI_PROVIDER || "auto").toLowerCase();
 
   if (conversationId) {
     conversation = await getConversationByIdForUser({
@@ -271,6 +269,8 @@ const sendMessage = asyncHandler(async (req, res) => {
   const toolIntent = detectToolIntent(trimmedMessage);
   let toolResult = null;
   let assistantReply = "";
+  let providerUsed = "";
+  let providerModel = "";
   let toolMetadata = {
     toolUsed: false,
     toolName: "",
@@ -480,15 +480,26 @@ const sendMessage = asyncHandler(async (req, res) => {
     ];
 
     // Fetch relevant memories for context
-    const memoryResult = await getRelevantMemories(req.user._id, trimmedMessage);
-    
+    let memoryResult = await getRelevantMemories(req.user._id, trimmedMessage);
+
+    // Fallback: if no relevant memories found, include latest 5-8 active memories
+    if (!memoryResult.success || memoryResult.memories.length === 0) {
+      const latestMemoriesResult = await listMemories(req.user._id);
+      if (latestMemoriesResult.success && latestMemoriesResult.memories.length > 0) {
+        memoryResult = {
+          success: true,
+          memories: latestMemoriesResult.memories.slice(0, 8),
+        };
+      }
+    }
+
     if (process.env.NODE_ENV === "development") {
-      console.log("Memories injected count:", memoryResult.success ? memoryResult.memories.length : 0);
+      console.log("Memories injected:", memoryResult.success ? memoryResult.memories.length : 0);
     }
 
     // Build system prompt with user profile and memories
-    let systemPrompt = `You are SomuPilot, a helpful AI assistant.\n\n`;
-    
+    let systemPrompt = `You are SomuPilot, a helpful personal AI assistant.\n\n`;
+
     if (user) {
       systemPrompt += `Current logged-in user profile:\n`;
       systemPrompt += `Name: ${user.name}\n`;
@@ -500,7 +511,7 @@ const sendMessage = asyncHandler(async (req, res) => {
         .map((m) => `- ${m.title}: ${m.content} (${m.category})`)
         .join("\n");
       systemPrompt += `Relevant saved memories:\n${memoryText}\n\n`;
-      
+
       // Add memory used indicator to metadata
       toolMetadata = {
         toolUsed: true,
@@ -510,14 +521,10 @@ const sendMessage = asyncHandler(async (req, res) => {
     }
 
     systemPrompt += `Rules:\n`;
-    systemPrompt += `- If user asks their name, answer using the profile name.\n`;
-    systemPrompt += `- If user asks what you remember, answer from saved memories.\n`;
-    systemPrompt += `- Do not claim you know something that is not in profile or memory.\n`;
-    systemPrompt += `- Provide personalized assistance based on the user's profile and memories.\n`;
-
-    if (process.env.NODE_ENV === "development") {
-      console.log("System prompt length:", systemPrompt.length);
-    }
+    systemPrompt += `- If the user asks their name, answer from the user profile.\n`;
+    systemPrompt += `- If the user asks what you remember, answer using saved memories.\n`;
+    systemPrompt += `- Do not say you do not know if the answer exists in profile or memories.\n`;
+    systemPrompt += `- Do not invent facts not present in profile or memories.\n`;
 
     try {
       const messagesWithContext = [
@@ -528,20 +535,34 @@ const sendMessage = asyncHandler(async (req, res) => {
         ...pendingMessages,
       ];
 
-      assistantReply = await generateAiReply({
+      const aiResponse = await generateAiResponse({
         messages: messagesWithContext,
+        systemPrompt,
       });
+      assistantReply = aiResponse.text;
+      providerUsed = aiResponse.provider;
+      providerModel = aiResponse.model;
+      conversation.provider = providerUsed || provider;
     } catch (error) {
+      const currentUsage = await resetCreditsIfNeeded(req.user._id);
+
       if (error.statusCode) {
-        throw createHttpError(error.statusCode, error.message, error.data || null);
+        throw createHttpError(error.statusCode, error.message, {
+          ...(error.data || {}),
+          usage: sanitizeUsage(currentUsage),
+        });
       }
 
-      throw createHttpError(503, "AI service is temporarily unavailable.");
+      throw createHttpError(503, "AI service is temporarily unavailable. Please try again.", {
+        errorType: "service_unavailable",
+        usage: sanitizeUsage(currentUsage),
+      });
     }
   }
 
-  // Consume credit for both tool actions and AI chat
-  const updatedUsage = await consumeAiCredit(req.user._id);
+  const updatedUsage = toolIntent
+    ? usage
+    : await consumeAiCredit(req.user._id);
   
   // Append user message
   conversation.messages.push({
@@ -558,6 +579,8 @@ const sendMessage = asyncHandler(async (req, res) => {
     toolUsed: toolMetadata.toolUsed,
     toolName: toolMetadata.toolName,
     toolStatus: toolMetadata.toolStatus,
+    providerUsed,
+    providerModel,
   });
 
   await conversation.save();
@@ -571,9 +594,12 @@ const sendMessage = asyncHandler(async (req, res) => {
       toolUsed: toolMetadata.toolUsed,
       toolName: toolMetadata.toolName,
       toolStatus: toolMetadata.toolStatus,
+      providerUsed,
+      providerModel,
     },
     conversation: sanitizeConversation(conversation),
     usage: sanitizeUsage(updatedUsage),
+    providerUsed,
   });
 });
 
@@ -635,10 +661,28 @@ const updateConversationTitle = asyncHandler(async (req, res) => {
   );
 });
 
+const toggleConversationPin = asyncHandler(async (req, res) => {
+  const conversation = await getConversationByIdForUser({
+    conversationId: req.params.id,
+    userId: req.user._id,
+  });
+
+  conversation.isPinned = !conversation.isPinned;
+  conversation.pinnedAt = conversation.isPinned ? new Date() : null;
+  await conversation.save();
+
+  return sendSuccess(
+    res,
+    conversation.isPinned ? "Conversation pinned successfully" : "Conversation unpinned successfully",
+    createConversationPreview(conversation)
+  );
+});
+
 export {
   deleteConversation,
   getConversation,
   getConversations,
   sendMessage,
+  toggleConversationPin,
   updateConversationTitle,
 };

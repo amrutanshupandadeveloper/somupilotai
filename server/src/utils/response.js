@@ -18,7 +18,23 @@ const sendError = (res, message, statusCode = 500, data = null) => {
   };
 
   if (data !== null) {
-    payload.data = data;
+    if (data.errorType) {
+      payload.errorType = data.errorType;
+    }
+
+    if (typeof data.retryAfterSeconds === "number") {
+      payload.retryAfterSeconds = data.retryAfterSeconds;
+    }
+
+    if (data.usage) {
+      payload.usage = data.usage;
+    }
+
+    const { errorType, retryAfterSeconds, usage, ...rest } = data;
+
+    if (Object.keys(rest).length > 0) {
+      payload.data = rest;
+    }
   }
 
   return res.status(statusCode).json(payload);

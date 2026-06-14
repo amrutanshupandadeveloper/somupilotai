@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { notesService } from "../services/notesService";
 import { PageHeader } from "../components/ui/PageHeader";
 import { SectionCard } from "../components/ui/SectionCard";
@@ -22,74 +22,57 @@ function NotesPage() {
     isPinned: false,
   });
 
-  const fetchNotes = async () => {
-    try {
-      setLoading(true);
-      const params = {};
-      if (searchQuery) params.search = searchQuery;
-      const response = await notesService.getNotes(params);
-      setNotes(response.data);
-    } catch (error) {
-      console.error("Failed to fetch notes:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchNotes = async () => {
+      try {
+        setLoading(true);
+        const params = searchQuery ? { search: searchQuery } : {};
+        const response = await notesService.getNotes(params);
+        setNotes(response.data || []);
+      } catch (error) {
+        console.error("Failed to fetch notes:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchNotes();
   }, [searchQuery]);
 
-  const handleCreateNote = async (e) => {
-    e.preventDefault();
-    try {
-      const tagsArray = formData.tags
+  const resetForm = () => {
+    setShowModal(false);
+    setEditingNote(null);
+    setFormData({ title: "", content: "", tags: "", isPinned: false });
+  };
+
+  const refreshNotes = async () => {
+    const params = searchQuery ? { search: searchQuery } : {};
+    const response = await notesService.getNotes(params);
+    setNotes(response.data || []);
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    const payload = {
+      ...formData,
+      tags: formData.tags
         .split(",")
         .map((tag) => tag.trim())
-        .filter(Boolean);
-      await notesService.createNote({
-        ...formData,
-        tags: tagsArray,
-      });
-      setShowModal(false);
-      setFormData({ title: "", content: "", tags: "", isPinned: false });
-      fetchNotes();
-    } catch (error) {
-      console.error("Failed to create note:", error);
-    }
-  };
+        .filter(Boolean),
+    };
 
-  const handleUpdateNote = async (e) => {
-    e.preventDefault();
     try {
-      const tagsArray = formData.tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean);
-      await notesService.updateNote(editingNote._id, {
-        ...formData,
-        tags: tagsArray,
-      });
-      setShowModal(false);
-      setEditingNote(null);
-      setFormData({ title: "", content: "", tags: "", isPinned: false });
-      fetchNotes();
-    } catch (error) {
-      console.error("Failed to update note:", error);
-    }
-  };
+      if (editingNote?._id) {
+        await notesService.updateNote(editingNote._id, payload);
+      } else {
+        await notesService.createNote(payload);
+      }
 
-  const handleDeleteNote = async (id) => {
-    setDeleteConfirm(id);
-  };
-
-  const confirmDelete = async () => {
-    try {
-      await notesService.deleteNote(deleteConfirm);
-      setDeleteConfirm(null);
-      fetchNotes();
+      resetForm();
+      await refreshNotes();
     } catch (error) {
-      console.error("Failed to delete note:", error);
+      console.error("Failed to save note:", error);
     }
   };
 
@@ -98,159 +81,154 @@ function NotesPage() {
     setFormData({
       title: note.title,
       content: note.content,
-      tags: note.tags.join(", "),
+      tags: (note.tags || []).join(", "),
       isPinned: note.isPinned,
     });
     setShowModal(true);
   };
 
-  const handleModalClose = () => {
-    setShowModal(false);
-    setEditingNote(null);
-    setFormData({ title: "", content: "", tags: "", isPinned: false });
+  const confirmDelete = async () => {
+    try {
+      await notesService.deleteNote(deleteConfirm);
+      setDeleteConfirm(null);
+      await refreshNotes();
+    } catch (error) {
+      console.error("Failed to delete note:", error);
+    }
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Notes"
-        subtitle="Capture and organize your thoughts"
-        actions={<Button onClick={() => setShowModal(true)}>New Note</Button>}
+        subtitle="Capture ideas, save reference snippets, and keep your working knowledge easy to revisit."
+        actions={<Button onClick={() => setShowModal(true)}>Add note</Button>}
       />
 
       <SectionCard>
-        <input
-          type="text"
-          placeholder="Search notes..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-sky-400/50 focus:outline-none"
-        />
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+          <input
+            type="text"
+            placeholder="Search notes by title, content, or tags"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className="app-input"
+          />
+          <div className="rounded-[24px] border border-[var(--border)] bg-white/5 px-4 py-3 text-sm text-[var(--text-muted)]">
+            {notes.length} note{notes.length === 1 ? "" : "s"} found
+          </div>
+        </div>
       </SectionCard>
 
       {loading ? (
         <ListSkeleton count={6} />
       ) : notes.length === 0 ? (
         <EmptyState
-          icon="📝"
+          icon="N"
           title="No notes yet"
-          description="Create your first note to get started"
-          action={<Button onClick={() => setShowModal(true)}>Create Note</Button>}
+          description="Create your first note to start building your personal knowledge base."
+          action={<Button onClick={() => setShowModal(true)}>Create note</Button>}
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {notes.map((note) => (
-            <article
-              key={note._id}
-              className="rounded-2xl border border-white/10 bg-slate-900/70 p-6 hover:border-white/20 transition"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="text-lg font-semibold text-white line-clamp-1">
-                  {note.title}
-                </h3>
-                {note.isPinned && (
-                  <Badge variant="info">Pinned</Badge>
-                )}
+            <article key={note._id} className="app-card rounded-[28px] p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="truncate text-lg font-semibold text-[var(--text)]">{note.title}</h3>
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    Updated {new Date(note.updatedAt).toLocaleDateString()}
+                  </p>
+                </div>
+                {note.isPinned ? <Badge variant="info">Pinned</Badge> : null}
               </div>
-              <p className="text-sm text-slate-300 line-clamp-3 mb-4">
+
+              <p className="mt-4 line-clamp-4 text-sm leading-7 text-[var(--text-soft)]">
                 {note.content}
               </p>
-              {note.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {note.tags.map((tag, index) => (
-                    <Badge key={index} variant="default" className="text-[10px]">
+
+              {(note.tags || []).length > 0 ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {note.tags.map((tag) => (
+                    <Badge key={tag} variant="default">
                       {tag}
                     </Badge>
                   ))}
                 </div>
-              )}
-              <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                <span className="text-xs text-slate-500">
-                  {new Date(note.updatedAt).toLocaleDateString()}
-                </span>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleEditClick(note)}>
-                    Edit
-                  </Button>
-                  <Button variant="danger" size="sm" onClick={() => handleDeleteNote(note._id)}>
-                    Delete
-                  </Button>
-                </div>
+              ) : null}
+
+              <div className="mt-5 flex items-center gap-2 border-t border-[var(--border)] pt-4">
+                <Button variant="ghost" size="sm" onClick={() => handleEditClick(note)}>
+                  Edit
+                </Button>
+                <Button variant="danger" size="sm" onClick={() => setDeleteConfirm(note._id)}>
+                  Delete
+                </Button>
               </div>
             </article>
           ))}
         </div>
       )}
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur">
-          <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-slate-900 p-6">
-            <h2 className="text-xl font-semibold text-white mb-6">
-              {editingNote ? "Edit Note" : "New Note"}
-            </h2>
-            <form onSubmit={editingNote ? handleUpdateNote : handleCreateNote} className="space-y-4">
+      {showModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/84 p-4 backdrop-blur">
+          <div className="app-card w-full max-w-2xl rounded-[32px] p-6 sm:p-7">
+            <div className="mb-6 flex items-center justify-between gap-3">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-sky-400/50 focus:outline-none"
-                  placeholder="Note title"
-                />
+                <p className="app-kicker">Notes</p>
+                <h2 className="mt-2 text-2xl font-semibold text-[var(--text)]">
+                  {editingNote ? "Edit note" : "Create note"}
+                </h2>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Content
-                </label>
-                <textarea
-                  required
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  rows={6}
-                  className="w-full rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-sky-400/50 focus:outline-none resize-none"
-                  placeholder="Note content"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Tags (comma-separated)
-                </label>
-                <input
-                  type="text"
-                  value={formData.tags}
-                  onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-sky-400/50 focus:outline-none"
-                  placeholder="tag1, tag2, tag3"
-                />
-              </div>
-              <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={resetForm}>
+                Close
+              </Button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <input
+                type="text"
+                required
+                value={formData.title}
+                onChange={(event) => setFormData({ ...formData, title: event.target.value })}
+                className="app-input"
+                placeholder="Note title"
+              />
+              <textarea
+                required
+                rows={7}
+                value={formData.content}
+                onChange={(event) => setFormData({ ...formData, content: event.target.value })}
+                className="app-input min-h-[180px] resize-none"
+                placeholder="Write your note..."
+              />
+              <input
+                type="text"
+                value={formData.tags}
+                onChange={(event) => setFormData({ ...formData, tags: event.target.value })}
+                className="app-input"
+                placeholder="Tags, separated, by commas"
+              />
+              <label className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-white/5 px-4 py-3 text-sm text-[var(--text-soft)]">
                 <input
                   type="checkbox"
-                  id="isPinned"
                   checked={formData.isPinned}
-                  onChange={(e) => setFormData({ ...formData, isPinned: e.target.checked })}
-                  className="rounded border-white/10 bg-slate-950/50 text-sky-400 focus:ring-sky-400/50"
+                  onChange={(event) =>
+                    setFormData({ ...formData, isPinned: event.target.checked })
+                  }
                 />
-                <label htmlFor="isPinned" className="text-sm text-slate-300">
-                  Pin note
-                </label>
-              </div>
-              <div className="flex gap-3 pt-4">
-                <Button variant="ghost" onClick={handleModalClose} className="flex-1">
+                Pin this note
+              </label>
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="ghost" className="flex-1" onClick={resetForm}>
                   Cancel
                 </Button>
-                <Button className="flex-1">
-                  {editingNote ? "Update" : "Create"}
-                </Button>
+                <Button className="flex-1">{editingNote ? "Update note" : "Save note"}</Button>
               </div>
             </form>
           </div>
         </div>
-      )}
+      ) : null}
 
       <ConfirmModal
         isOpen={!!deleteConfirm}

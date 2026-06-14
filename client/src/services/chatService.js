@@ -29,10 +29,16 @@ const updateConversationTitle = async (id, title) => {
   return response.data;
 };
 
+const toggleConversationPin = async (id) => {
+  const response = await api.patch(`/chat/conversations/${id}/pin`);
+  return response.data;
+};
+
 export {
   deleteConversation,
   getConversation,
   getConversations,
   sendMessage,
+  toggleConversationPin,
   updateConversationTitle,
 };

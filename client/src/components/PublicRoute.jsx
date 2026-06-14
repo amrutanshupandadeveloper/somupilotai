@@ -1,14 +1,16 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { LoadingSkeleton } from "./ui/LoadingSkeleton";
 
 function PublicRoute({ children }) {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center px-6">
-        <div className="rounded-3xl border border-white/10 bg-slate-900/60 px-8 py-6 text-sm text-slate-300 backdrop-blur">
-          Loading...
+      <div className="app-shell flex min-h-[calc(100vh-5rem)] items-center justify-center px-6">
+        <div className="app-card w-full max-w-md rounded-[28px] px-8 py-6">
+          <LoadingSkeleton className="h-5 w-28" />
+          <LoadingSkeleton className="mt-4 h-3 w-48" />
         </div>
       </div>
     );

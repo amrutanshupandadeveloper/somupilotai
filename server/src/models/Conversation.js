@@ -28,6 +28,14 @@ const conversationMessageSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    providerUsed: {
+      type: String,
+      default: "",
+    },
+    providerModel: {
+      type: String,
+      default: "",
+    },
   },
   {
     _id: false,
@@ -56,6 +64,15 @@ const conversationSchema = new mongoose.Schema(
       type: String,
       default: "gemini",
       trim: true,
+    },
+    isPinned: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    pinnedAt: {
+      type: Date,
+      default: null,
     },
   },
   {

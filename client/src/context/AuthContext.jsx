@@ -142,6 +142,7 @@ function AuthProvider({ children }) {
         usage,
         usageCountdown,
         isAuthenticated: Boolean(user && token),
+        isAdmin: user?.role === "admin",
         isLoading,
         login,
         register,

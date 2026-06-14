@@ -6,29 +6,109 @@
   color-scheme: dark;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
-  background:
-    radial-gradient(circle at top, rgba(56, 189, 248, 0.18), transparent 28%),
-    linear-gradient(180deg, #020617 0%, #0f172a 50%, #111827 100%);
-  color: #e5eef9;
+  --bg: #000000;
+  --bg-elevated: #050505;
+  --surface: #0a0a0a;
+  --surface-strong: #0d0d0d;
+  --surface-elevated: #111111;
+  --sidebar: #050505;
+  --surface-soft: rgba(13, 13, 13, 0.92);
+  --surface-glass: rgba(10, 10, 10, 0.96);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --text: #f8fafc;
+  --text-muted: #8b95a7;
+  --text-soft: #b8c0cc;
+  --accent: #14b8a6;
+  --accent-strong: #0ea896;
+  --accent-contrast: #041f1d;
+  --accent-soft: rgba(20, 184, 166, 0.14);
+  --danger: #f87171;
+  --warning: #f59e0b;
+  --success: #34d399;
+  --shadow-soft: 0 24px 72px rgba(0, 0, 0, 0.52);
+  --skeleton-base: #0d0d0d;
+  --skeleton-track: rgba(255, 255, 255, 0.06);
+  --skeleton-gradient: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.025) 42%,
+    rgba(255, 255, 255, 0.07) 50%,
+    rgba(255, 255, 255, 0.025) 58%,
+    transparent 100%
+  );
+  --shell-gradient:
+    radial-gradient(circle at top left, rgba(20, 184, 166, 0.1), transparent 24%),
+    linear-gradient(180deg, #000000 0%, #000000 100%);
+  --hover: rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f8fafc;
+  --bg-elevated: #eef4fb;
+  --surface: #ffffff;
+  --surface-strong: #f8fafc;
+  --surface-elevated: #ffffff;
+  --sidebar: #ffffff;
+  --surface-soft: rgba(255, 255, 255, 0.88);
+  --surface-glass: rgba(255, 255, 255, 0.92);
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --text-soft: #334155;
+  --accent: #14b8a6;
+  --accent-strong: #10b981;
+  --accent-contrast: #f0fdfa;
+  --accent-soft: rgba(20, 184, 166, 0.12);
+  --danger: #dc2626;
+  --warning: #d97706;
+  --success: #059669;
+  --shadow-soft: 0 24px 70px rgba(15, 23, 42, 0.08);
+  --skeleton-base: #e2e8f0;
+  --skeleton-track: rgba(255, 255, 255, 0.65);
+  --skeleton-gradient: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 42%,
+    rgba(255, 255, 255, 0.75) 50%,
+    rgba(255, 255, 255, 0.35) 58%,
+    transparent 100%
+  );
+  --shell-gradient:
+    radial-gradient(circle at top left, rgba(20, 184, 166, 0.12), transparent 28%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 18%),
+    linear-gradient(180deg, #f8fafc 0%, #eef4fb 100%);
+  --hover: rgba(0, 0, 0, 0.04);
 }
 
 html,
 body,
 #root {
-  min-height: 100%;
+  height: 100%;
+}
+
+html {
+  background: var(--bg);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top, rgba(56, 189, 248, 0.18), transparent 28%),
-    linear-gradient(180deg, #020617 0%, #0f172a 50%, #111827 100%);
   overflow-x: hidden;
+  background-color: var(--bg);
+  background: var(--shell-gradient);
+  color: var(--text);
+  transition: background 220ms ease, color 220ms ease;
 }
 
 * {
   box-sizing: border-box;
+}
+
+*::selection {
+  background: rgba(20, 184, 166, 0.24);
 }
 
 a {
@@ -37,6 +117,217 @@ a {
 }
 
 button,
-input {
+input,
+textarea,
+select {
   font: inherit;
+}
+
+textarea {
+  resize: vertical;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.42);
+}
+
+/* Thin scrollbar for sidebar recent chats */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.35);
+}
+
+@layer base {
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid rgba(20, 184, 166, 0.85);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .app-shell {
+    @apply min-h-screen;
+    background: var(--shell-gradient);
+    color: var(--text);
+  }
+
+  .app-card {
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(14px);
+  }
+
+  .app-panel {
+    background: var(--surface-glass);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(14px);
+  }
+
+  .app-subtle {
+    background: color-mix(in srgb, var(--surface-elevated) 88%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  }
+
+  .app-input {
+    @apply w-full rounded-2xl px-4 py-3 text-sm outline-none transition;
+    background: color-mix(in srgb, var(--surface-elevated) 94%, transparent);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .app-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .app-input:hover {
+    border-color: var(--border-strong);
+  }
+
+  .app-input:focus {
+    border-color: rgba(20, 184, 166, 0.52);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+
+  .app-kicker {
+    color: var(--accent);
+    @apply text-[11px] font-semibold uppercase tracking-[0.35em];
+  }
+
+  .app-gradient-border {
+    position: relative;
+  }
+
+  .app-gradient-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      rgba(20, 184, 166, 0.28),
+      rgba(20, 184, 166, 0.08),
+      rgba(255, 255, 255, 0.04)
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .skeleton-shimmer {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--skeleton-base);
+    background-image: var(--skeleton-gradient);
+    background-repeat: no-repeat;
+    background-size: 220% 100%;
+    animation: shimmer 2.2s linear infinite;
+  }
+}
+
+:root:not([data-theme="light"]) .app-shell,
+:root:not([data-theme="light"]) .app-card,
+:root:not([data-theme="light"]) .app-panel,
+:root:not([data-theme="light"]) .app-subtle,
+:root:not([data-theme="light"]) .app-input {
+  color-scheme: dark;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -220% 0;
+  }
+  100% {
+    background-position: 220% 0;
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html.theme-transition-to-dark::view-transition-old(root) {
+  z-index: 0;
+}
+
+html.theme-transition-to-dark::view-transition-new(root) {
+  z-index: 1;
+}
+
+html.theme-transition-to-light::view-transition-old(root) {
+  z-index: 1;
+}
+
+html.theme-transition-to-light::view-transition-new(root) {
+  z-index: 0;
+}
+
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition-property: none !important;
+  animation-play-state: running;
+}
+
+html.theme-fading body {
+  animation: theme-fade 220ms ease;
+}
+
+@keyframes theme-fade {
+  from {
+    opacity: 0.985;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+  }
+
+  html.theme-transitioning *,
+  html.theme-fading body {
+    animation: none !important;
+  }
 }

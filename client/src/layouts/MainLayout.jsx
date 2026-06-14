@@ -1,39 +1,46 @@
-import { Outlet } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { useTheme } from "../context/ThemeContext";
+import { Button } from "../components/ui/Button";
 
 function MainLayout() {
   const { isAuthenticated } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="min-h-screen text-slate-100">
-      <header className="border-b border-white/10 bg-slate-950/40 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-sky-300">
-              SomuPilot AI
+    <div className="app-shell">
+      <header
+        className="sticky top-0 z-30 border-b border-[var(--border)] backdrop-blur-xl"
+        style={{ backgroundColor: "var(--surface-glass)" }}
+      >
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-5">
+          <Link to="/" className="min-w-0">
+            <p className="app-kicker">SomuPilot AI</p>
+            <p className="mt-2 text-sm text-[var(--text-muted)]">
+              Personal AI assistant workspace
             </p>
-            <p className="mt-1 text-sm text-slate-400">
-              Personal AI Agent Dashboard
-            </p>
-          </div>
+          </Link>
+
           <nav className="flex items-center gap-3">
-            <Link
-              to="/"
-              className="rounded-xl px-3 py-2 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white"
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              onClick={(event) => toggleTheme(event)}
+              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
             >
-              Home
-            </Link>
-            <Link
-              to={isAuthenticated ? "/dashboard" : "/login"}
-              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-sky-300/40 hover:bg-white/10"
-            >
-              {isAuthenticated ? "Dashboard" : "Login"}
+              <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
+            </Button>
+            <Link to={isAuthenticated ? "/dashboard" : "/login"}>
+              <Button variant="secondary" size="sm">
+                {isAuthenticated ? "Open app" : "Login"}
+              </Button>
             </Link>
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl">
+
+      <main className="mx-auto max-w-7xl px-4 sm:px-6">
         <Outlet />
       </main>
     </div>

@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 import authRoutes from "./routes/authRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import usageRoutes from "./routes/usageRoutes.js";
@@ -9,6 +10,7 @@ import notesRoutes from "./routes/notesRoutes.js";
 import tasksRoutes from "./routes/tasksRoutes.js";
 import memoryRoutes from "./routes/memoryRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -66,6 +68,7 @@ app.get("/", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/ai", aiRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api/usage", usageRoutes);
@@ -73,6 +76,7 @@ app.use("/api/notes", notesRoutes);
 app.use("/api/tasks", tasksRoutes);
 app.use("/api/memories", memoryRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/admin", adminRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 

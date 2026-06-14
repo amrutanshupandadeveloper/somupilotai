@@ -1,20 +1,23 @@
 export function UsageProgress({ current, max, label, color = "sky" }) {
   const percentage = max > 0 ? (current / max) * 100 : 0;
-  
+
   const colors = {
-    sky: "bg-sky-400",
-    green: "bg-green-400",
-    yellow: "bg-yellow-400",
-    red: "bg-red-400",
+    sky: "bg-[var(--accent)]",
+    green: "bg-emerald-400",
+    yellow: "bg-amber-400",
+    red: "bg-rose-400",
   };
-  
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-slate-400">{label}</span>
-        <span className="text-white font-medium">{current}/{max}</span>
+        <span className="text-[var(--text-muted)]">{label}</span>
+        <span className="font-medium text-[var(--text)]">{current}/{max}</span>
       </div>
-      <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+      <div
+        className="h-2 overflow-hidden rounded-full"
+        style={{ backgroundColor: "var(--surface-elevated)" }}
+      >
         <div
           className={`h-full ${colors[color]} transition-all duration-300`}
           style={{ width: `${Math.min(percentage, 100)}%` }}

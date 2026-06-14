@@ -20,6 +20,11 @@ const sanitizeConversation = (conversation) => ({
     role: message.role,
     content: message.content,
     createdAt: message.createdAt,
+    toolUsed: message.toolUsed,
+    toolName: message.toolName,
+    toolStatus: message.toolStatus,
+    providerUsed: message.providerUsed,
+    providerModel: message.providerModel,
   })),
   createdAt: conversation.createdAt,
   updatedAt: conversation.updatedAt,
@@ -57,11 +62,12 @@ const getConversationByIdForUser = async ({ conversationId, userId }) => {
   return conversation;
 };
 
-const appendMessage = (conversation, role, content) => {
+const appendMessage = (conversation, role, content, metadata = {}) => {
   conversation.messages.push({
     role,
     content: content.trim(),
     createdAt: new Date(),
+    ...metadata,
   });
 };
 
