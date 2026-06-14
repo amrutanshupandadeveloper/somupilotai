@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import ChatComposer from "../components/ChatComposer";
 import ChatMessageBubble from "../components/ChatMessageBubble";
+import { useAuth } from "../hooks/useAuth";
 import * as chatService from "../services/chatService";
+import { getUsageToneClasses } from "../utils/usage";
 
 function ChatPage() {
+  const { usage, usageCountdown, setUsage, refreshUsageSafely } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
   const [activeConversation, setActiveConversation] = useState(null);
@@ -26,6 +29,7 @@ function ChatPage() {
       try {
         const response = await chatService.getConversations();
         setConversations(response.data);
+        await refreshUsageSafely();
 
         if (response.data.length > 0) {
           setActiveConversationId(response.data[0]._id);
@@ -134,8 +138,18 @@ function ChatPage() {
       const response = await chatService.sendMessage(messageToSend, activeConversationId);
       setActiveConversationId(response.data.conversationId);
       setActiveConversation(response.data.conversation);
+      setUsage(response.data.usage);
       await refreshConversations(response.data.conversationId);
     } catch (apiError) {
+      const usageData = apiError.response?.data?.data;
+
+      if (usageData?.nextResetAt) {
+        setUsage((currentUsage) => ({
+          ...(currentUsage || {}),
+          ...usageData,
+        }));
+      }
+
       setError(apiError.response?.data?.message || "Unable to send message");
       setActiveConversation((current) => {
         if (!current) {
@@ -317,12 +331,50 @@ function ChatPage() {
           <h1 className="mt-2 text-2xl font-semibold text-white">
             {activeConversation?.title || "New conversation"}
           </h1>
+          {usage ? (
+            <div className="mt-4">
+              <div
+                className={`rounded-2xl border px-4 py-3 text-sm ${getUsageToneClasses(
+                  usage.aiCredits
+                )}`}
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="font-semibold">
+                    {usage.aiCredits} messages left out of {usage.maxAiCredits}
+                  </p>
+                  <p className="text-xs opacity-80">Renews in {usageCountdown}</p>
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className={`h-full rounded-full ${
+                      usage.aiCredits <= 0
+                        ? "bg-rose-300"
+                        : usage.aiCredits <= 5
+                          ? "bg-amber-300"
+                          : "bg-emerald-300"
+                    }`}
+                    style={{
+                      width: `${Math.max(
+                        0,
+                        Math.min(100, (usage.aiCredits / usage.maxAiCredits) * 100)
+                      )}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
           {error ? (
             <div className="mb-4 rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">
               {error}
+            </div>
+          ) : null}
+          {usage?.aiCredits === 0 ? (
+            <div className="mb-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">
+              Your AI credits are finished. Please wait until credits renew.
             </div>
           ) : null}
 
@@ -370,7 +422,14 @@ function ChatPage() {
           onChange={setDraftMessage}
           onSubmit={handleSend}
           isSending={isSending}
-          disabled={isLoadingMessages}
+          disabled={isLoadingMessages || usage?.aiCredits === 0}
+          helperText={
+            usage?.aiCredits === 0
+              ? `Credits renew in ${usageCountdown}.`
+              : usage
+                ? `${usage.aiCredits}/${usage.maxAiCredits} AI credits available.`
+                : ""
+          }
         />
       </section>
     </div>

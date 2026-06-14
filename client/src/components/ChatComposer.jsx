@@ -4,6 +4,7 @@ function ChatComposer({
   onSubmit,
   isSending,
   disabled,
+  helperText,
 }) {
   const handleKeyDown = (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -33,6 +34,9 @@ function ChatComposer({
           {isSending ? "Sending..." : "Send"}
         </button>
       </div>
+      {helperText ? (
+        <p className="mt-3 text-xs text-slate-400">{helperText}</p>
+      ) : null}
     </div>
   );
 }

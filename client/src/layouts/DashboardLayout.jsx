@@ -1,20 +1,21 @@
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import UsageBadge from "../components/UsageBadge";
 
 const navItems = [
   { label: "Dashboard", to: "/dashboard" },
   { label: "Chat", to: "/chat" },
-  { label: "Notes", to: "/dashboard" },
-  { label: "Tasks", to: "/dashboard" },
-  { label: "Memories", to: "/dashboard" },
-  { label: "Documents", to: "/dashboard" },
+  { label: "Notes", to: "/notes" },
+  { label: "Tasks", to: "/tasks" },
+  { label: "Memories", to: "/memories" },
+  { label: "Documents", to: "/documents" },
   { label: "Settings", to: "/dashboard" },
 ];
 
 function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, usage, usageCountdown } = useAuth();
 
   const handleLogout = async () => {
     await logout();
@@ -86,13 +87,16 @@ function DashboardLayout() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-sky-300/40 hover:bg-white/10"
-                onClick={handleLogout}
-              >
-                Logout
-              </button>
+              <div className="flex items-center gap-3">
+                <UsageBadge usage={usage} countdown={usageCountdown} />
+                <button
+                  type="button"
+                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-sky-300/40 hover:bg-white/10"
+                  onClick={handleLogout}
+                >
+                  Logout
+                </button>
+              </div>
             </div>
           </header>
 

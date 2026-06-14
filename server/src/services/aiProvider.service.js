@@ -4,6 +4,12 @@ const SYSTEM_PROMPT =
   "You are SomuPilot, a helpful personal AI assistant for productivity, learning, planning, notes, tasks, and document help. Be clear, practical, and friendly.";
 
 const CONTEXT_MESSAGE_LIMIT = 12;
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_FALLBACK_MODELS = [
+  DEFAULT_GEMINI_MODEL,
+  "gemini-flash-latest",
+  "gemini-2.0-flash",
+];
 
 const mapConversationForGemini = (messages) =>
   messages
@@ -23,15 +29,18 @@ const extractGeminiText = (responseData) => {
   return text || "";
 };
 
-const generateWithGemini = async ({ messages }) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.AI_MODEL || "gemini-1.5-flash";
+const normalizeModelName = (model) => model.replace(/^models\//, "");
 
-  if (!apiKey) {
-    throw createHttpError(503, "AI service is temporarily unavailable.");
-  }
+const buildGeminiModelCandidates = (requestedModel) => {
+  const candidates = [requestedModel, ...GEMINI_FALLBACK_MODELS]
+    .filter(Boolean)
+    .map(normalizeModelName);
 
-  const response = await fetch(
+  return [...new Set(candidates)];
+};
+
+const postToGemini = async ({ model, apiKey, messages }) =>
+  fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
       method: "POST",
@@ -48,18 +57,45 @@ const generateWithGemini = async ({ messages }) => {
     }
   );
 
-  if (!response.ok) {
+const generateWithGemini = async ({ messages }) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  const requestedModel = process.env.AI_MODEL || DEFAULT_GEMINI_MODEL;
+
+  if (!apiKey) {
     throw createHttpError(503, "AI service is temporarily unavailable.");
   }
 
-  const data = await response.json();
-  const reply = extractGeminiText(data);
+  const candidateModels = buildGeminiModelCandidates(requestedModel);
+  let lastErrorMessage = "";
 
-  if (!reply) {
+  for (const model of candidateModels) {
+    const response = await postToGemini({ model, apiKey, messages });
+    const data = await response.json();
+
+    if (!response.ok) {
+      lastErrorMessage = data?.error?.message || "";
+
+      if (response.status === 404) {
+        continue;
+      }
+
+      throw createHttpError(503, "AI service is temporarily unavailable.");
+    }
+
+    const reply = extractGeminiText(data);
+
+    if (!reply) {
+      throw createHttpError(503, "AI service is temporarily unavailable.");
+    }
+
+    return reply;
+  }
+
+  if (lastErrorMessage) {
     throw createHttpError(503, "AI service is temporarily unavailable.");
   }
 
-  return reply;
+  throw createHttpError(503, "AI service is temporarily unavailable.");
 };
 
 const generateAiReply = async ({ messages }) => {

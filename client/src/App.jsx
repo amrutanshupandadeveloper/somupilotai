@@ -8,6 +8,10 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import ChatPage from "./pages/ChatPage";
+import NotesPage from "./pages/NotesPage";
+import TasksPage from "./pages/TasksPage";
+import MemoriesPage from "./pages/MemoriesPage";
+import DocumentsPage from "./pages/DocumentsPage";
 
 function App() {
   return (
@@ -40,6 +44,10 @@ function App() {
       >
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/chat" element={<ChatPage />} />
+        <Route path="/notes" element={<NotesPage />} />
+        <Route path="/tasks" element={<TasksPage />} />
+        <Route path="/memories" element={<MemoriesPage />} />
+        <Route path="/documents" element={<DocumentsPage />} />
       </Route>
     </Routes>
   );

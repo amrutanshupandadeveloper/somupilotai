@@ -1,12 +1,16 @@
 import { createContext, useEffect, useState } from "react";
 import { AUTH_TOKEN_KEY } from "../services/api";
 import * as authService from "../services/authService";
+import * as usageService from "../services/usageService";
+import { formatTimeUntilReset } from "../utils/usage";
 
 const AuthContext = createContext(null);
 
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem(AUTH_TOKEN_KEY));
+  const [usage, setUsage] = useState(null);
+  const [usageCountdown, setUsageCountdown] = useState("0m");
   const [isLoading, setIsLoading] = useState(true);
 
   const persistAuth = (authPayload) => {
@@ -27,6 +31,37 @@ function AuthProvider({ children }) {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     setToken(null);
     setUser(null);
+    setUsage(null);
+    setUsageCountdown("0m");
+  };
+
+  const applyUsage = (usageData) => {
+    const resolvedUsage =
+      typeof usageData === "function" ? usageData(usage) : usageData;
+
+    if (!resolvedUsage) {
+      setUsage(null);
+      setUsageCountdown("0m");
+      return;
+    }
+
+    setUsage(resolvedUsage);
+    setUsageCountdown(formatTimeUntilReset(resolvedUsage.nextResetAt));
+  };
+
+  const refreshUsage = async () => {
+    const response = await usageService.getUsage();
+    applyUsage(response.data);
+    return response.data;
+  };
+
+  const refreshUsageSafely = async () => {
+    try {
+      return await refreshUsage();
+    } catch (_error) {
+      applyUsage(null);
+      return null;
+    }
   };
 
   const checkAuth = async () => {
@@ -44,6 +79,7 @@ function AuthProvider({ children }) {
       const response = await authService.getMe();
       setToken(storedToken);
       setUser(response.data);
+      await refreshUsageSafely();
     } catch (_error) {
       clearAuth();
     } finally {
@@ -54,12 +90,14 @@ function AuthProvider({ children }) {
   const login = async (credentials) => {
     const response = await authService.login(credentials);
     persistAuth(response.data);
+    await refreshUsageSafely();
     return response;
   };
 
   const register = async (payload) => {
     const response = await authService.register(payload);
     persistAuth(response.data);
+    await refreshUsageSafely();
     return response;
   };
 
@@ -79,17 +117,39 @@ function AuthProvider({ children }) {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    if (!usage?.nextResetAt || !token) {
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
+      const nextCountdown = formatTimeUntilReset(usage.nextResetAt);
+      setUsageCountdown(nextCountdown);
+
+      if (nextCountdown === "0m") {
+        refreshUsageSafely().catch(() => {});
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [usage?.nextResetAt, token]);
+
   return (
     <AuthContext.Provider
       value={{
         user,
         token,
+        usage,
+        usageCountdown,
         isAuthenticated: Boolean(user && token),
         isLoading,
         login,
         register,
         logout,
         checkAuth,
+        refreshUsage,
+        refreshUsageSafely,
+        setUsage: applyUsage,
       }}
     >
       {children}

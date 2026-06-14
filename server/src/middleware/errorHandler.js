@@ -10,7 +10,7 @@ const errorHandler = (error, _req, res, _next) => {
   const statusCode = error.statusCode || 500;
 
   if (error.name === "ValidationError") {
-    return sendError(res, error.message, 400);
+    return sendError(res, error.message, 400, error.data || null);
   }
 
   if (error.code === 11000) {
@@ -20,7 +20,8 @@ const errorHandler = (error, _req, res, _next) => {
   return sendError(
     res,
     statusCode === 500 ? "Internal server error" : error.message,
-    statusCode
+    statusCode,
+    error.data || null
   );
 };
 

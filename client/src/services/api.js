@@ -1,9 +1,10 @@
 import axios from "axios";
 
 const AUTH_TOKEN_KEY = "somupilot_ai_token";
+const defaultApiBaseUrl = `http://${window.location.hostname}:5000/api`;
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || defaultApiBaseUrl,
   headers: {
     "Content-Type": "application/json",
   },

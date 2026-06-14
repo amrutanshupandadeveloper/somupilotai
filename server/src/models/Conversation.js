@@ -16,6 +16,18 @@ const conversationMessageSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    toolUsed: {
+      type: Boolean,
+      default: false,
+    },
+    toolName: {
+      type: String,
+      default: "",
+    },
+    toolStatus: {
+      type: String,
+      default: "",
+    },
   },
   {
     _id: false,
