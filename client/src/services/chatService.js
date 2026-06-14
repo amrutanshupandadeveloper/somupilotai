@@ -1,11 +1,13 @@
 import api from "./api";
 
-const sendMessage = async (message, conversationId, model, documentId) => {
+const sendMessage = async (message, conversationId, model, documentId, options = {}) => {
   const response = await api.post("/chat", {
     message,
     conversationId,
     model,
     documentId,
+  }, {
+    signal: options.signal,
   });
 
   return response.data;

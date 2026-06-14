@@ -255,11 +255,16 @@ const sendMessage = asyncHandler(async (req, res) => {
       _id: documentId,
       userId: req.user._id,
     });
+
+    if (!attachedDocument) {
+      throw createHttpError(404, "Attached PDF was not found");
+    }
   }
 
   let conversation;
   const trimmedMessage = message.trim();
-  const provider = (process.env.AI_PROVIDER || "auto").toLowerCase();
+  const requestedProvider = model ? String(model).trim().toLowerCase() : "auto";
+  const provider = requestedProvider || (process.env.AI_PROVIDER || "auto").toLowerCase();
 
   if (conversationId) {
     conversation = await getConversationByIdForUser({
@@ -547,6 +552,9 @@ const sendMessage = asyncHandler(async (req, res) => {
     systemPrompt += `- If the user asks what you remember, answer using saved memories.\n`;
     systemPrompt += `- Do not say you do not know if the answer exists in profile or memories.\n`;
     systemPrompt += `- Do not invent facts not present in profile or memories.\n`;
+    systemPrompt += `- For general answers, use short headings and clean bullet points when helpful.\n`;
+    systemPrompt += `- For coding answers, explain briefly and then provide fenced code blocks with language names.\n`;
+    systemPrompt += `- Use helpful icons like ✅, 📌, ⚠️, 💡 only when they improve readability.\n`;
 
     try {
       const messagesWithContext = [
@@ -560,7 +568,7 @@ const sendMessage = asyncHandler(async (req, res) => {
       const aiResponse = await generateAiResponse({
         messages: messagesWithContext,
         systemPrompt,
-        overrideProvider: model ? String(model).toLowerCase() : undefined,
+        overrideProvider: requestedProvider,
       });
       assistantReply = aiResponse.text;
       providerUsed = aiResponse.provider;

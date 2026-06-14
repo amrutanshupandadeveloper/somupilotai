@@ -14,9 +14,10 @@ import { Button } from "../components/ui/Button";
 
 const suggestedPrompts = [
   "Plan my study day",
-  "Summarize my notes",
   "Create a task",
+  "Summarize my notes",
   "Ask from a PDF",
+  "Save this as memory",
 ];
 
 const emitConversationRefresh = () => {
@@ -30,9 +31,11 @@ function ChatTopBarActions({
   onCopyConversation,
   onCopyLink,
   onExportConversation,
+  onExportMarkdown,
   onRename,
   onTogglePin,
   onDelete,
+  onSearchToggle,
   toastMessage,
 }) {
   const [isShareOpen, setIsShareOpen] = useState(false);
@@ -129,6 +132,16 @@ function ChatTopBarActions({
             >
               Export as text
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                onExportMarkdown();
+                setIsShareOpen(false);
+              }}
+              className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-[var(--text)] transition hover:bg-white/5"
+            >
+              Export as markdown
+            </button>
           </div>
         ) : null}
       </div>
@@ -177,6 +190,16 @@ function ChatTopBarActions({
               className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-[var(--text)] transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {activeConversation?.isPinned ? "Unpin chat" : "Pin chat"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onSearchToggle();
+                setIsMenuOpen(false);
+              }}
+              className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-[var(--text)] transition hover:bg-white/5"
+            >
+              Search in chat
             </button>
             <button
               type="button"
@@ -231,6 +254,9 @@ function ChatPage() {
   const [attachedFile, setAttachedFile] = useState(null);
   const [attachmentStatus, setAttachmentStatus] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const abortControllerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
@@ -241,6 +267,17 @@ function ChatPage() {
     () =>
       currentMessages
         .map((message) => `${message.role === "assistant" ? "SomuPilot" : user?.name || "You"}: ${message.content}`)
+        .join("\n\n"),
+    [currentMessages, user?.name]
+  );
+
+  const conversationMarkdown = useMemo(
+    () =>
+      currentMessages
+        .map((message) => {
+          const speaker = message.role === "assistant" ? "## SomuPilot" : `## ${user?.name || "You"}`;
+          return `${speaker}\n\n${message.content}`;
+        })
         .join("\n\n"),
     [currentMessages, user?.name]
   );
@@ -324,6 +361,20 @@ function ChatPage() {
     setToastMessage("Exported");
   };
 
+  const handleExportMarkdown = () => {
+    const exportText = conversationMarkdown || "# SomuPilot Chat\n\nNo conversation yet.";
+    const blob = new Blob([exportText], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${(activeConversation?.title || "somupilot-chat").replace(/\s+/g, "-").toLowerCase()}.md`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setToastMessage("Markdown exported");
+  };
+
   const handleTogglePin = async () => {
     if (!activeConversation?._id) {
       return;
@@ -364,6 +415,66 @@ function ChatPage() {
     setToastMessage("Chat deleted");
   };
 
+  const handleEditRequest = (nextMessage) => {
+    setDraftMessage(nextMessage);
+    setToastMessage("Edited message moved to composer");
+  };
+
+  const handleDeleteMessageRequest = (message) => {
+    setActiveConversation((current) =>
+      current
+        ? {
+            ...current,
+            messages: current.messages.filter((item) => item !== message),
+          }
+        : current
+    );
+    setToastMessage("Message removed from view");
+  };
+
+  const handleStopGenerating = () => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsSending(false);
+    setToastMessage("Generation stopped");
+    setActiveConversation((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const nextMessages = [...current.messages];
+      const lastMessage = nextMessages[nextMessages.length - 1];
+      if (lastMessage?.role === "user") {
+        nextMessages.pop();
+      }
+
+      return {
+        ...current,
+        messages: nextMessages,
+      };
+    });
+  };
+
+  const handleRegenerate = (assistantMessage) => {
+    if (usage?.aiCredits === 0) {
+      setError(`Your AI credits are finished. Please wait until credits renew in ${usageCountdown}.`);
+      return;
+    }
+
+    const assistantIndex = currentMessages.findIndex((message) => message === assistantMessage);
+    if (assistantIndex <= 0) {
+      return;
+    }
+
+    for (let index = assistantIndex - 1; index >= 0; index -= 1) {
+      if (currentMessages[index]?.role === "user") {
+        handleSend(currentMessages[index].content);
+        setToastMessage("Regenerating response");
+        return;
+      }
+    }
+  };
+
   useEffect(() => {
     setTopBarConfig({
       title: activeConversation?.title || "Chat",
@@ -379,12 +490,14 @@ function ChatPage() {
           onCopyConversation={() => copyToClipboard(conversationText || "No conversation yet.", "Copied")}
           onCopyLink={() => copyToClipboard(window.location.href, "Chat link copied")}
           onExportConversation={handleExportConversation}
+          onExportMarkdown={handleExportMarkdown}
           onRename={() => {
             setRenameValue(activeConversation?.title || "");
             setRenameModalOpen(true);
           }}
           onTogglePin={handleTogglePin}
           onDelete={() => setDeleteModalOpen(true)}
+          onSearchToggle={() => setSearchOpen((current) => !current)}
           toastMessage={toastMessage}
         />
       ),
@@ -404,6 +517,7 @@ function ChatPage() {
 
     const documentId = attachedFile?.id || null;
     const documentName = attachedFile?.name || "";
+    abortControllerRef.current = new AbortController();
 
     if (!prefilledMessage) {
       setDraftMessage("");
@@ -438,7 +552,13 @@ function ChatPage() {
 
     try {
       const selectedModel = localStorage.getItem("somupilot_ai_model_preference") || "Auto";
-      const response = await chatService.sendMessage(messageToSend, activeConversationId, selectedModel, documentId);
+      const response = await chatService.sendMessage(
+        messageToSend,
+        activeConversationId,
+        selectedModel,
+        documentId,
+        { signal: abortControllerRef.current.signal }
+      );
       setSearchParams({ conversationId: response.data.conversationId });
       setActiveConversation(response.data.conversation);
       setUsage(response.data.usage);
@@ -446,6 +566,11 @@ function ChatPage() {
       setAttachedFile(null);
       setAttachmentStatus("");
     } catch (apiError) {
+      if (apiError?.name === "CanceledError" || apiError?.code === "ERR_CANCELED") {
+        setDraftMessage(messageToSend);
+        return;
+      }
+
       const usageData = apiError.response?.data?.usage || apiError.response?.data?.data;
 
       if (usageData?.nextResetAt) {
@@ -473,6 +598,7 @@ function ChatPage() {
       });
       setDraftMessage(messageToSend);
     } finally {
+      abortControllerRef.current = null;
       setIsSending(false);
     }
   };
@@ -485,6 +611,18 @@ function ChatPage() {
           className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 sm:px-6"
         >
           <div className="mx-auto max-w-[860px]">
+            {searchOpen ? (
+              <div className="mb-4 rounded-2xl border border-[var(--border)] bg-white/5 p-3">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search in this chat..."
+                  className="w-full bg-transparent text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
+                />
+              </div>
+            ) : null}
+
             {error ? (
               <div className="mb-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
                 {error}
@@ -528,7 +666,7 @@ function ChatPage() {
                   </p>
                 </div>
 
-                <div className="mt-8 grid w-full max-w-3xl gap-3 sm:grid-cols-2">
+                <div className="mt-8 grid w-full max-w-3xl gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {suggestedPrompts.map((prompt) => (
                     <button
                       key={prompt}
@@ -547,11 +685,30 @@ function ChatPage() {
             ) : (
               <div className="space-y-4 pb-24">
                 {currentMessages.map((message, index) => (
+                  (() => {
+                    const isSearchMatch = !searchQuery.trim()
+                      ? true
+                      : String(message.content || "")
+                          .toLowerCase()
+                          .includes(searchQuery.trim().toLowerCase());
+                    const previousMessage = currentMessages[index - 1];
+                    const canRegenerate =
+                      message.role === "assistant" && previousMessage?.role === "user";
+
+                    return (
                   <ChatMessageBubble
                     key={`${message.createdAt || "message"}-${index}`}
                     message={message}
                     currentUserName={user?.name || "You"}
+                    onEditRequest={handleEditRequest}
+                    onDeleteRequest={handleDeleteMessageRequest}
+                    onRegenerateRequest={handleRegenerate}
+                    searchQuery={searchQuery}
+                    isSearchMatch={isSearchMatch}
+                    canRegenerate={canRegenerate}
                   />
+                    );
+                  })()
                 ))}
 
                 {isSending ? <ThinkingIndicator /> : null}
@@ -584,6 +741,7 @@ function ChatPage() {
             usage={usage}
             usageCountdown={usageCountdown}
             onUsageUpdate={setUsage}
+            onStop={handleStopGenerating}
             attachedFile={attachedFile}
             setAttachedFile={setAttachedFile}
             attachmentStatus={attachmentStatus}

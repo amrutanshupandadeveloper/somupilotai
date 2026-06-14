@@ -21,6 +21,7 @@ function ChatComposer({
   setAttachmentStatus,
   isUploading,
   setIsUploading,
+  onStop,
 }) {
   const textareaRef = useRef(null);
   const composerRef = useRef(null);
@@ -273,14 +274,14 @@ function ChatComposer({
 
               <button
                 type="button"
-                onClick={onSubmit}
-                disabled={!canSend}
+                onClick={isSending ? onStop : onSubmit}
+                disabled={isSending ? false : !canSend}
                 className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full text-sm font-semibold text-slate-950 transition disabled:cursor-not-allowed disabled:bg-[var(--surface-elevated)] disabled:text-[var(--text-muted)]"
-                style={canSend ? { backgroundColor: "var(--accent)" } : undefined}
-                aria-label={isSending ? "Sending message" : "Send message"}
+                style={(canSend || isSending) ? { backgroundColor: "var(--accent)" } : undefined}
+                aria-label={isSending ? "Stop generating" : "Send message"}
               >
                 {isSending ? (
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-950/35 border-t-slate-950" />
+                  <span aria-hidden="true" className="inline-block h-3.5 w-3.5 rounded-[2px] bg-slate-950" />
                 ) : (
                   <span aria-hidden="true">↑</span>
                 )}
