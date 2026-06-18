@@ -29,7 +29,7 @@ function ChatHistoryItem({ conversation, isActive, onSelect, onPin, onUnpin, onD
     <div className="relative group">
       <button
         onClick={handleClick}
-        className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-all ${
+        className={`flex min-h-[42px] w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-all ${
           isActive
             ? "bg-teal-500/10 text-teal-400"
             : "text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)]"
@@ -48,11 +48,11 @@ function ChatHistoryItem({ conversation, isActive, onSelect, onPin, onUnpin, onD
             d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
           />
         </svg>
-        <span className="flex-1 truncate text-sm">{conversation.title}</span>
+        <span className="flex-1 truncate text-[13px]">{conversation.title}</span>
         
         <button
           onClick={handlePinClick}
-          className={`opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-[var(--hover)] ${
+          className={`rounded p-1 opacity-0 transition-opacity hover:bg-[var(--hover)] group-hover:opacity-100 ${
             conversation.isPinned ? "opacity-100 text-teal-400" : ""
           }`}
           title={conversation.isPinned ? "Unpin" : "Pin"}
@@ -74,7 +74,7 @@ function ChatHistoryItem({ conversation, isActive, onSelect, onPin, onUnpin, onD
 
         <button
           onClick={handleMenuClick}
-          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-[var(--hover)]"
+          className="rounded p-1 opacity-0 transition-opacity hover:bg-[var(--hover)] group-hover:opacity-100"
           title="More options"
         >
           <svg

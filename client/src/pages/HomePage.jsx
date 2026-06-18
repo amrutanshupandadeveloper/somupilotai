@@ -1,9 +1,71 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { Button } from "../components/ui/Button";
+import { LoadingSkeleton } from "../components/ui/LoadingSkeleton";
+
+function HomePageSkeleton() {
+  return (
+    <section className="flex min-h-[calc(100vh-5rem)] items-center py-12 sm:py-16">
+      <div className="grid w-full gap-10 lg:grid-cols-[minmax(0,1.1fr)_420px] lg:items-center">
+        <div>
+          <LoadingSkeleton className="h-3 w-28 rounded-full" />
+          <div className="mt-5 max-w-4xl space-y-3">
+            <LoadingSkeleton className="h-12 w-full max-w-4xl rounded-3xl sm:h-16" />
+            <LoadingSkeleton className="h-12 w-full max-w-[46rem] rounded-3xl sm:h-16" />
+            <LoadingSkeleton className="h-12 w-full max-w-[38rem] rounded-3xl sm:h-16" />
+            <LoadingSkeleton className="h-12 w-[78%] max-w-[22rem] rounded-3xl sm:h-16" />
+          </div>
+          <div className="mt-6 max-w-2xl space-y-3">
+            <LoadingSkeleton className="h-5 w-full rounded-2xl sm:h-6" />
+            <LoadingSkeleton className="h-5 w-full max-w-[96%] rounded-2xl sm:h-6" />
+          </div>
+          <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+            <LoadingSkeleton className="h-14 w-full sm:w-[272px] rounded-[22px] sm:h-16" />
+            <LoadingSkeleton className="h-14 w-full sm:w-40 rounded-[22px] sm:h-16" />
+          </div>
+        </div>
+
+        <div className="app-gradient-border app-card rounded-[36px] p-6 sm:p-7">
+          <div className="rounded-[28px] border border-[var(--border)] bg-white/5 p-5">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <LoadingSkeleton className="h-5 w-36 rounded-xl" />
+                <LoadingSkeleton className="h-4 w-52 rounded-xl" />
+              </div>
+              <LoadingSkeleton className="h-8 w-16 rounded-full" />
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <div className="ml-auto max-w-[80%] rounded-3xl bg-[var(--accent-soft)] px-4 py-3">
+                <LoadingSkeleton className="h-3 w-12 rounded-full bg-black/10" />
+                <LoadingSkeleton className="mt-3 h-4 w-full rounded-xl bg-black/10" />
+                <LoadingSkeleton className="mt-2 h-4 w-3/4 rounded-xl bg-black/10" />
+              </div>
+              <div className="max-w-[88%] rounded-3xl border border-[var(--border)] bg-white/5 px-4 py-3">
+                <LoadingSkeleton className="h-3 w-24 rounded-full" />
+                <LoadingSkeleton className="mt-3 h-4 w-full rounded-xl" />
+                <LoadingSkeleton className="mt-2 h-4 w-5/6 rounded-xl" />
+                <LoadingSkeleton className="mt-2 h-4 w-2/3 rounded-xl" />
+              </div>
+              <div className="ml-auto max-w-[80%] rounded-3xl bg-[var(--accent-soft)] px-4 py-3">
+                <LoadingSkeleton className="h-3 w-12 rounded-full bg-black/10" />
+                <LoadingSkeleton className="mt-3 h-4 w-full rounded-xl bg-black/10" />
+                <LoadingSkeleton className="mt-2 h-4 w-4/5 rounded-xl bg-black/10" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function HomePage() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <HomePageSkeleton />;
+  }
 
   return (
     <section className="flex min-h-[calc(100vh-5rem)] items-center py-12 sm:py-16">

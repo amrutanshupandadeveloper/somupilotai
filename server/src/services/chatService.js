@@ -25,6 +25,8 @@ const sanitizeConversation = (conversation) => ({
     toolStatus: message.toolStatus,
     providerUsed: message.providerUsed,
     providerModel: message.providerModel,
+    providerPreset: message.providerPreset,
+    sources: message.sources || [],
     documentId: message.documentId,
     documentName: message.documentName,
   })),

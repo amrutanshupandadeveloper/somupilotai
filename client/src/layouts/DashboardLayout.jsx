@@ -83,7 +83,7 @@ function DashboardLayout() {
             rightSlot={topBarConfig.rightSlot || null}
           />
 
-          <main className="min-w-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 xl:px-8">
+          <main className="min-w-0 flex-1 overflow-y-auto px-4 py-5 sm:px-5 xl:px-6">
             <Outlet context={outletContext} />
           </main>
         </div>

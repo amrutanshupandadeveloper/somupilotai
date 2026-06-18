@@ -20,10 +20,10 @@ function ChatHistoryList({
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {pinnedConversations.length > 0 && (
         <div>
-          <p className="px-3 text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2">
+          <p className="mb-2 px-2 text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">
             Pinned
           </p>
           <div className="space-y-1">
@@ -45,7 +45,7 @@ function ChatHistoryList({
 
       {recentConversations.length > 0 && (
         <div>
-          <p className="px-3 text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2">
+          <p className="mb-2 px-2 text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">
             Recent Chats
           </p>
           <div className="space-y-1">
@@ -66,7 +66,7 @@ function ChatHistoryList({
       )}
 
       {safeConversations.length === 0 && (
-        <p className="px-3 text-sm text-[var(--text-muted)]">
+        <p className="px-2 text-sm text-[var(--text-muted)]">
           No conversations yet
         </p>
       )}

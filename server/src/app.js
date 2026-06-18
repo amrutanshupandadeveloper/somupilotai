@@ -11,6 +11,8 @@ import tasksRoutes from "./routes/tasksRoutes.js";
 import memoryRoutes from "./routes/memoryRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import debugRoutes from "./routes/debugRoutes.js";
+import searchRoutes from "./routes/searchRoutes.js";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -83,7 +85,11 @@ app.use("/api/notes", notesRoutes);
 app.use("/api/tasks", tasksRoutes);
 app.use("/api/memories", memoryRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/search", searchRoutes);
 app.use("/api/admin", adminRoutes);
+if (process.env.NODE_ENV !== "production") {
+  app.use("/api/debug", debugRoutes);
+}
 app.use(notFoundHandler);
 app.use(errorHandler);
 

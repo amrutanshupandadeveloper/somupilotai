@@ -109,6 +109,7 @@ function AssistantMessageRenderer({ content }) {
           {children}
         </blockquote>
       ),
+      hr: () => null,
       a: ({ href, children }) => (
         <a
           href={href}

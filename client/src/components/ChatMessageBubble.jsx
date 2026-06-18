@@ -12,11 +12,16 @@ import {
 } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import AssistantMessageRenderer from "./AssistantMessageRenderer";
+import { formatProviderName } from "../utils/modelPresets";
+import MessageActionBar from "./chat/MessageActionBar";
+import MessageFullscreenModal from "./chat/MessageFullscreenModal";
+import WebSourceChips from "./WebSourceChips";
 
 function ChatMessageBubble({
   message,
   currentUserName = "You",
   onEditRequest,
+  onAssistantUpdateRequest,
   onDeleteRequest,
   onRegenerateRequest,
   searchQuery = "",
@@ -28,10 +33,15 @@ function ChatMessageBubble({
   const toolName = message.toolName;
   const toolStatus = message.toolStatus;
   const providerUsed = message.providerUsed;
+  const providerPreset = message.providerPreset;
+  const sources = Array.isArray(message.sources) ? message.sources : [];
   const [copied, setCopied] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(message.content || "");
+  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+  const [assistantEditValue, setAssistantEditValue] = useState(message.content || "");
+  const [assistantCopied, setAssistantCopied] = useState(false);
 
   const timestamp = useMemo(() => {
     if (!message.createdAt) {
@@ -72,6 +82,12 @@ function ChatMessageBubble({
     window.setTimeout(() => setCopied(false), 1500);
   };
 
+  const handleAssistantCopy = async () => {
+    await navigator.clipboard.writeText(message.content || "");
+    setAssistantCopied(true);
+    window.setTimeout(() => setAssistantCopied(false), 1500);
+  };
+
   const handleShare = async () => {
     const shareText = `${isUser ? currentUserName : "SomuPilot"}: ${message.content || ""}`;
 
@@ -103,36 +119,73 @@ function ChatMessageBubble({
     onEditRequest?.(trimmedValue, message);
   };
 
+  const saveAssistantMessage = (nextContent) => {
+    const trimmedValue = String(nextContent || "").trim();
+
+    if (!trimmedValue) {
+      return;
+    }
+
+    onAssistantUpdateRequest?.(message, trimmedValue);
+    setAssistantEditValue(trimmedValue);
+    setIsFullscreenOpen(false);
+  };
+
   const actionButtonClass =
     "inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] bg-white/5 text-[var(--text-muted)] transition hover:bg-white/10 hover:text-[var(--text)]";
 
   const highlightMessage = searchQuery.trim().length > 0 && isSearchMatch;
 
+  const topToolbar = !isUser ? (
+    <div className="mb-3 flex justify-end">
+      <div className="relative">
+        <MessageActionBar
+          onEdit={() => {
+            setAssistantEditValue(message.content || "");
+            setIsFullscreenOpen(true);
+          }}
+          onCopy={handleAssistantCopy}
+          onFullscreen={() => {
+            setAssistantEditValue(message.content || "");
+            setIsFullscreenOpen(true);
+          }}
+        />
+
+        {assistantCopied ? (
+          <div className="pointer-events-none absolute right-0 top-[calc(100%+10px)] z-20 rounded-full border border-emerald-400/20 bg-emerald-500/12 px-3 py-1 text-[11px] text-emerald-200 shadow-lg">
+            Copied to clipboard
+          </div>
+        ) : null}
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className={`group flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-full ${isUser ? "items-end" : "items-start"} flex flex-col`}>
-        <div className="mb-1.5 px-1 opacity-0 transition duration-150 group-hover:opacity-100 max-md:opacity-100">
-          <span className="text-[11px] text-[var(--text-muted)]">{timestamp}</span>
-        </div>
-
         <div
           className={`rounded-[24px] px-4 py-3 text-sm leading-6 shadow-sm ${
             isUser
-              ? "max-w-[600px] bg-[var(--accent)] text-slate-950"
+              ? "max-w-[600px] text-[var(--text)]"
               : "max-w-[760px] border border-[var(--border)] text-[var(--text-soft)]"
           }`}
           style={
-            !isUser
+            isUser
               ? {
+                  backgroundColor: "#2f2f2f",
+                  boxShadow: highlightMessage ? "0 0 0 1px rgba(255,255,255,0.08)" : undefined,
+                }
+              : {
                   backgroundColor: "var(--surface-elevated)",
                   boxShadow: highlightMessage ? "0 0 0 1px rgba(20,184,166,0.35)" : undefined,
                 }
-              : highlightMessage
-                ? { boxShadow: "0 0 0 1px rgba(15,23,42,0.16)" }
-                : undefined
           }
         >
-          {!isUser && toolUsed ? (
+          {topToolbar}
+
+          {!isUser && sources.length > 0 ? <WebSourceChips sources={sources} /> : null}
+
+          {!isUser && toolUsed && toolName !== "memoryContext" ? (
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <Badge variant={toolName === "memoryContext" ? "purple" : "info"} className="text-[10px]">
                 {getToolLabel()}
@@ -202,7 +255,17 @@ function ChatMessageBubble({
           ) : null}
         </div>
 
-        <div className={`mt-2 flex flex-wrap items-center gap-2 opacity-0 transition duration-150 group-hover:opacity-100 max-md:opacity-100 ${isUser ? "justify-end" : "justify-start"}`}>
+        <div className={`mt-1.5 px-1 ${isUser ? "self-end" : "self-start"}`}>
+          <span className="text-[11px] text-[var(--text-muted)]">{timestamp}</span>
+        </div>
+
+        <div
+          className={`mt-2 flex flex-wrap items-center gap-2 transition duration-150 ${
+            isUser
+              ? "justify-end opacity-0 group-hover:opacity-100 max-md:opacity-100"
+              : "justify-start opacity-100"
+          }`}
+        >
           {isUser ? (
             <>
               <button type="button" onClick={() => setIsEditing(true)} className={actionButtonClass} aria-label="Edit message">
@@ -220,9 +283,6 @@ function ChatMessageBubble({
             </>
           ) : (
             <>
-              <button type="button" onClick={handleCopy} className={actionButtonClass} aria-label="Copy response">
-                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              </button>
               <button type="button" onClick={handleShare} className={actionButtonClass} aria-label="Share response">
                 <Share2 className="h-3.5 w-3.5" />
               </button>
@@ -257,10 +317,21 @@ function ChatMessageBubble({
 
           {!isUser && providerUsed ? (
             <span className="text-[11px] text-[var(--text-muted)]">
-              Answered by {providerUsed.charAt(0).toUpperCase() + providerUsed.slice(1)}
+              Answered by {formatProviderName(providerUsed)}
+              {providerPreset ? ` · ${providerPreset.charAt(0).toUpperCase() + providerPreset.slice(1)}` : ""}
+              {sources.length > 0 ? " · Web search used" : ""}
             </span>
           ) : null}
         </div>
+
+        {!isUser ? (
+          <MessageFullscreenModal
+            isOpen={isFullscreenOpen}
+            content={assistantEditValue}
+            onClose={() => setIsFullscreenOpen(false)}
+            onSave={saveAssistantMessage}
+          />
+        ) : null}
       </div>
     </div>
   );

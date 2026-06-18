@@ -7,10 +7,17 @@ import ScrollToBottom from "../components/ScrollToBottom";
 import { useAuth } from "../hooks/useAuth";
 import * as chatService from "../services/chatService";
 import { getFriendlyAiErrorMessage } from "../utils/aiError";
+import { getAiProviderStatus } from "../services/aiService";
 import { LoadingSkeleton } from "../components/ui/LoadingSkeleton";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+import {
+  buildModelPresetOptions,
+  getStoredModelPreset,
+  normalizeModelPreset,
+  persistModelPreset,
+} from "../utils/modelPresets";
 
 const suggestedPrompts = [
   "Plan my study day",
@@ -19,6 +26,26 @@ const suggestedPrompts = [
   "Ask from a PDF",
   "Save this as memory",
 ];
+
+const WEB_SEARCH_KEYWORDS = [
+  "latest",
+  "current",
+  "today",
+  "2026",
+  "search web",
+  "website scan",
+  "news",
+  "price",
+  "job vacancy",
+  "github repo scan",
+  "docs",
+  "recent",
+];
+
+const needsWebSearch = (query = "") => {
+  const lowerQuery = String(query || "").trim().toLowerCase();
+  return WEB_SEARCH_KEYWORDS.some((keyword) => lowerQuery.includes(keyword));
+};
 
 const emitConversationRefresh = () => {
   window.dispatchEvent(new CustomEvent("somupilot:conversations-updated"));
@@ -256,12 +283,28 @@ function ChatPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [providerRateLimitUntil, setProviderRateLimitUntil] = useState(null);
+  const [providerRateLimitTick, setProviderRateLimitTick] = useState(0);
+  const [providerStatus, setProviderStatus] = useState(null);
+  const [selectedPreset, setSelectedPreset] = useState(getStoredModelPreset);
+  const [thinkingState, setThinkingState] = useState({
+    active: false,
+    status: "thinking",
+    usesWebSearch: false,
+  });
   const abortControllerRef = useRef(null);
+  const thinkingTimeoutsRef = useRef([]);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
   const activeConversationId = searchParams.get("conversationId");
   const currentMessages = activeConversation?.messages || [];
+  const modelPresetOptions = useMemo(
+    () => buildModelPresetOptions(providerStatus),
+    [providerStatus]
+  );
+  const activePresetOption =
+    modelPresetOptions.find((option) => option.key === selectedPreset) || modelPresetOptions[0];
 
   const conversationText = useMemo(
     () =>
@@ -287,6 +330,19 @@ function ChatPage() {
   }, []);
 
   useEffect(() => {
+    const loadProviderStatus = async () => {
+      try {
+        const response = await getAiProviderStatus();
+        setProviderStatus(response.data);
+      } catch (_error) {
+        setProviderStatus(null);
+      }
+    };
+
+    loadProviderStatus();
+  }, []);
+
+  useEffect(() => {
     if (!toastMessage) {
       return undefined;
     }
@@ -294,6 +350,23 @@ function ChatPage() {
     const timeout = window.setTimeout(() => setToastMessage(""), 1800);
     return () => window.clearTimeout(timeout);
   }, [toastMessage]);
+
+  useEffect(() => {
+    if (!providerRateLimitUntil) {
+      return undefined;
+    }
+
+    const interval = window.setInterval(() => {
+      setProviderRateLimitTick((current) => current + 1);
+
+      if (Date.now() >= providerRateLimitUntil) {
+        setProviderRateLimitUntil(null);
+        setError("");
+      }
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [providerRateLimitUntil]);
 
   useEffect(() => {
     const loadConversation = async () => {
@@ -323,6 +396,14 @@ function ChatPage() {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [currentMessages, isSending, isNearBottom]);
+
+  useEffect(
+    () => () => {
+      thinkingTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      thinkingTimeoutsRef.current = [];
+    },
+    []
+  );
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -432,6 +513,25 @@ function ChatPage() {
     setToastMessage("Message removed from view");
   };
 
+  const handleAssistantUpdateRequest = (targetMessage, nextContent) => {
+    setActiveConversation((current) =>
+      current
+        ? {
+            ...current,
+            messages: current.messages.map((item) =>
+              item === targetMessage
+                ? {
+                    ...item,
+                    content: nextContent,
+                  }
+                : item
+            ),
+          }
+        : current
+    );
+    setToastMessage("Response updated");
+  };
+
   const handleStopGenerating = () => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
@@ -517,7 +617,11 @@ function ChatPage() {
 
     const documentId = attachedFile?.id || null;
     const documentName = attachedFile?.name || "";
+    const usesWebSearch = needsWebSearch(messageToSend);
     abortControllerRef.current = new AbortController();
+
+    thinkingTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    thinkingTimeoutsRef.current = [];
 
     if (!prefilledMessage) {
       setDraftMessage("");
@@ -525,6 +629,35 @@ function ChatPage() {
 
     setIsSending(true);
     setError("");
+    setThinkingState({
+      active: true,
+      status: usesWebSearch ? "searching_web" : "thinking",
+      usesWebSearch,
+    });
+
+    if (usesWebSearch) {
+      thinkingTimeoutsRef.current = [
+        window.setTimeout(
+          () => setThinkingState((current) => ({ ...current, status: "searching_web" })),
+          200
+        ),
+        window.setTimeout(
+          () => setThinkingState((current) => ({ ...current, status: "reading_sources" })),
+          900
+        ),
+        window.setTimeout(
+          () => setThinkingState((current) => ({ ...current, status: "writing_answer" })),
+          1700
+        ),
+      ];
+    } else {
+      thinkingTimeoutsRef.current = [
+        window.setTimeout(
+          () => setThinkingState((current) => ({ ...current, status: "writing_answer" })),
+          900
+        ),
+      ];
+    }
 
     const optimisticUserMessage = {
       role: "user",
@@ -551,13 +684,16 @@ function ChatPage() {
     );
 
     try {
-      const selectedModel = localStorage.getItem("somupilot_ai_model_preference") || "Auto";
       const response = await chatService.sendMessage(
         messageToSend,
         activeConversationId,
-        selectedModel,
-        documentId,
-        { signal: abortControllerRef.current.signal }
+        {
+          selectedProvider: activePresetOption?.provider || "auto",
+          selectedModelLevel: activePresetOption?.key || "auto",
+          selectedModel: activePresetOption?.model || "",
+          documentId,
+          signal: abortControllerRef.current.signal,
+        }
       );
       setSearchParams({ conversationId: response.data.conversationId });
       setActiveConversation(response.data.conversation);
@@ -565,6 +701,11 @@ function ChatPage() {
       emitConversationRefresh();
       setAttachedFile(null);
       setAttachmentStatus("");
+      setThinkingState({
+        active: false,
+        status: "thinking",
+        usesWebSearch: false,
+      });
     } catch (apiError) {
       if (apiError?.name === "CanceledError" || apiError?.code === "ERR_CANCELED") {
         setDraftMessage(messageToSend);
@@ -572,6 +713,9 @@ function ChatPage() {
       }
 
       const usageData = apiError.response?.data?.usage || apiError.response?.data?.data;
+      const retryAfterSeconds = apiError.response?.data?.retryAfterSeconds;
+      const errorType = apiError.response?.data?.errorType;
+      const provider = apiError.response?.data?.provider || apiError.response?.data?.data?.provider;
 
       if (usageData?.nextResetAt) {
         setUsage((currentUsage) => ({
@@ -580,12 +724,26 @@ function ChatPage() {
         }));
       }
 
-      setError(
-        getFriendlyAiErrorMessage(
-          apiError,
-          "AI could not respond right now. Please try again."
-        )
+      const nextErrorMessage = getFriendlyAiErrorMessage(
+        apiError,
+        "AI could not respond right now. Please try again."
       );
+
+      setError(nextErrorMessage);
+
+      if (
+        errorType === "provider_rate_limit" &&
+        provider === "openrouter" &&
+        retryAfterSeconds > 0
+      ) {
+        setProviderRateLimitUntil(Date.now() + retryAfterSeconds * 1000);
+        getAiProviderStatus()
+          .then((response) => setProviderStatus(response.data))
+          .catch(() => {});
+      } else {
+        setProviderRateLimitUntil(null);
+      }
+
       setActiveConversation((current) => {
         if (!current) {
           return null;
@@ -598,10 +756,53 @@ function ChatPage() {
       });
       setDraftMessage(messageToSend);
     } finally {
+      thinkingTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      thinkingTimeoutsRef.current = [];
+      setThinkingState({
+        active: false,
+        status: "thinking",
+        usesWebSearch: false,
+      });
       abortControllerRef.current = null;
       setIsSending(false);
     }
   };
+
+  const handleProviderChange = (nextPreset) => {
+    const normalizedPreset = normalizeModelPreset(nextPreset);
+    setSelectedPreset(normalizedPreset);
+    persistModelPreset(normalizedPreset);
+    setError("");
+    setProviderRateLimitUntil(null);
+    getAiProviderStatus()
+      .then((response) => setProviderStatus(response.data))
+      .catch(() => {});
+  };
+
+  const handleRetryAfterError = () => {
+    setError("");
+    setProviderRateLimitUntil(null);
+
+    if (draftMessage.trim()) {
+      handleSend();
+    }
+  };
+
+  const providerRateLimitCountdown = useMemo(() => {
+    if (!providerRateLimitUntil) {
+      return "";
+    }
+
+    const secondsLeft = Math.max(0, Math.ceil((providerRateLimitUntil - Date.now()) / 1000));
+    const minutes = Math.floor(secondsLeft / 60);
+    const seconds = secondsLeft % 60;
+
+    if (minutes <= 0) {
+      return `${seconds}s`;
+    }
+
+    return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+  }, [providerRateLimitUntil, providerRateLimitTick]);
 
   return (
     <>
@@ -625,7 +826,24 @@ function ChatPage() {
 
             {error ? (
               <div className="mb-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-                {error}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p>{error}</p>
+                    {providerRateLimitUntil ? (
+                      <p className="mt-1 text-xs text-rose-200/80">
+                        Retry unlocked in {providerRateLimitCountdown || "0s"}.
+                      </p>
+                    ) : null}
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleRetryAfterError}
+                    disabled={isSending}
+                  >
+                    Try again
+                  </Button>
+                </div>
               </div>
             ) : null}
 
@@ -701,6 +919,7 @@ function ChatPage() {
                     message={message}
                     currentUserName={user?.name || "You"}
                     onEditRequest={handleEditRequest}
+                    onAssistantUpdateRequest={handleAssistantUpdateRequest}
                     onDeleteRequest={handleDeleteMessageRequest}
                     onRegenerateRequest={handleRegenerate}
                     searchQuery={searchQuery}
@@ -711,7 +930,13 @@ function ChatPage() {
                   })()
                 ))}
 
-                {isSending ? <ThinkingIndicator /> : null}
+                {isSending ? (
+                  <ThinkingIndicator
+                    status={thinkingState.status}
+                    sourcesLoading={thinkingState.usesWebSearch}
+                    webSearchEnabled={thinkingState.usesWebSearch}
+                  />
+                ) : null}
 
                 <div ref={messagesEndRef} />
               </div>
@@ -729,6 +954,8 @@ function ChatPage() {
             value={draftMessage}
             onChange={setDraftMessage}
             onSubmit={() => handleSend()}
+            onProviderChange={handleProviderChange}
+            selectedPreset={selectedPreset}
             isSending={isSending}
             disabled={isLoadingMessages || usage?.aiCredits === 0}
             helperText={
@@ -741,6 +968,7 @@ function ChatPage() {
             usage={usage}
             usageCountdown={usageCountdown}
             onUsageUpdate={setUsage}
+            providerStatus={providerStatus}
             onStop={handleStopGenerating}
             attachedFile={attachedFile}
             setAttachedFile={setAttachedFile}

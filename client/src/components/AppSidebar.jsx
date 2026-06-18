@@ -228,10 +228,10 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
 
   const sidebarWidthClass = useMemo(() => {
     if (isRailMode) {
-      return "w-[280px] lg:w-[84px]";
+      return "w-[min(320px,88vw)] lg:w-[72px]";
     }
 
-    return "w-[280px] lg:w-[288px]";
+    return "w-[min(320px,88vw)] lg:w-[268px]";
   }, [isRailMode]);
 
   const collapseButtonClass =
@@ -244,27 +244,27 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
       }`}
     >
       <div className="shrink-0 border-b border-[var(--border)] bg-[color:var(--sidebar)]">
-        <div className={`flex items-start ${isRailMode ? "justify-center px-3 py-4" : "justify-between px-4 py-4"}`}>
+        <div className={`flex items-start ${isRailMode ? "justify-center px-3 py-3.5" : "justify-between px-4 py-3.5"}`}>
           {isRailMode ? (
             <button
               type="button"
               onClick={() => setIsCollapsed(false)}
               aria-label="Expand sidebar"
               title="Expand sidebar"
-              className={`${collapseButtonClass} h-10 w-10`}
+              className={`${collapseButtonClass} h-10 w-10 rounded-xl`}
             >
               <CollapseIcon collapsed />
             </button>
           ) : (
             <>
               <div className="min-w-0">
-                <div className="mb-1 flex items-center gap-2">
-                  <svg className="h-6 w-6 text-teal-400" fill="currentColor" viewBox="0 0 24 24">
+                <div className="mb-0.5 flex items-center gap-2">
+                  <svg className="h-7 w-7 text-teal-400" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                   </svg>
-                  <h1 className="truncate text-lg font-semibold text-[var(--text)]">SomuPilot AI</h1>
+                  <h1 className="truncate text-[19px] font-semibold text-[var(--text)]">SomuPilot AI</h1>
                 </div>
-                <p className="ml-8 text-xs text-[var(--text-muted)]">Personal Agent</p>
+                <p className="ml-9 text-[12px] text-[var(--text-muted)]">Personal Agent</p>
               </div>
 
               {isDesktop ? (
@@ -273,7 +273,7 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
                   onClick={() => setIsCollapsed(true)}
                   aria-label="Collapse sidebar"
                   title="Collapse sidebar"
-                  className={`${collapseButtonClass} h-10 w-10`}
+                  className={`${collapseButtonClass} h-10 w-10 rounded-xl`}
                 >
                   <CollapseIcon collapsed={false} />
                 </button>
@@ -284,19 +284,19 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
       </div>
 
       <div className="sidebar-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-        <div className={`${isRailMode ? "px-3 py-4" : "px-4 py-4"}`}>
+        <div className={`${isRailMode ? "px-3 py-3.5" : "px-4 py-3.5"}`}>
           {isRailMode ? (
             <button
               type="button"
               onClick={onNewChat}
               aria-label="New Chat"
               title="New Chat"
-              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--accent-soft)] text-[var(--accent)] transition hover:bg-[var(--accent-soft)]/80"
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--accent-soft)] text-[var(--accent)] transition hover:bg-[var(--accent-soft)]/80"
             >
               {NewChatIcon}
             </button>
           ) : (
-            <Button className="mb-6 w-full" onClick={onNewChat}>
+            <Button className="mb-4 min-h-11 w-full rounded-xl px-4 py-2 text-[15px]" onClick={onNewChat}>
               {NewChatIcon}
               New Chat
             </Button>
@@ -304,7 +304,7 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
 
           {!isRailMode && usage ? (
             <div
-              className="mb-6 rounded-xl border border-[var(--border)] p-3"
+              className="mb-4 rounded-xl border border-[var(--border)] px-3 py-2.5"
               style={{ backgroundColor: "var(--surface-elevated)" }}
             >
               <CreditBadge
@@ -336,8 +336,8 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
                 title="More"
                 className={`w-full rounded-xl text-left transition-all ${
                   isRailMode
-                    ? "flex h-12 items-center justify-center border border-transparent text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)]"
-                    : "flex items-center justify-between px-3 py-2.5 text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)]"
+                    ? "flex h-11 items-center justify-center border border-transparent text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)]"
+                    : "flex min-h-[44px] items-center justify-between px-3 py-2 text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)]"
                 }`}
               >
                 {isRailMode ? (
@@ -375,7 +375,7 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
           </nav>
 
           {!isRailMode ? (
-            <div className="mt-6 border-t border-[var(--border)] pt-4">
+            <div className="mt-4 border-t border-[var(--border)] pt-3">
               <ChatHistoryList
                 conversations={conversations}
                 activeConversationId={activeConversationId}
@@ -393,7 +393,7 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
                 onClick={() => setIsCollapsed(false)}
                 aria-label="Expand recent chats"
                 title="Recent Chats"
-                className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--border)] bg-white/5 text-[var(--text-muted)] transition hover:bg-[var(--hover)] hover:text-[var(--text)]"
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border)] bg-white/5 text-[var(--text-muted)] transition hover:bg-[var(--hover)] hover:text-[var(--text)]"
               >
                 {ChatIcon}
               </button>
@@ -404,7 +404,7 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
 
       <div
         className={`shrink-0 border-t border-[var(--border)] bg-[color:var(--sidebar)] ${
-          isRailMode ? "px-3 pb-5 pt-4" : "px-4 pb-5 pt-4"
+          isRailMode ? "px-3 pb-4 pt-3.5" : "px-4 pb-4 pt-3.5"
         }`}
       >
         <AccountSection user={user} onLogout={onLogout} collapsed={isRailMode} />

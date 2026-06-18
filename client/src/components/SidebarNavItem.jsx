@@ -14,16 +14,16 @@ function SidebarNavItem({ to, label, hint, icon, onClick, isActive, collapsed = 
             : "text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)]"
         } ${
           collapsed
-            ? "flex h-12 items-center justify-center px-2 py-2"
-            : "flex items-center gap-3 px-3 py-2.5"
+            ? "flex h-11 items-center justify-center px-2 py-2"
+            : "flex min-h-[44px] items-center gap-2.5 px-3 py-2"
         }`
       }
     >
-      {icon && <span className="text-lg">{icon}</span>}
+      {icon && <span className="text-[18px] leading-none">{icon}</span>}
       {!collapsed ? (
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{label}</p>
-          {hint && <p className="truncate text-xs text-[var(--text-muted)]">{hint}</p>}
+          <p className="truncate text-[15px] font-medium leading-5">{label}</p>
+          {hint && <p className="truncate text-[11px] text-[var(--text-muted)]">{hint}</p>}
         </div>
       ) : null}
     </NavLink>

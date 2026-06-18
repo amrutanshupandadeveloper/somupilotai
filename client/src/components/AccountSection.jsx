@@ -45,8 +45,8 @@ function AccountSection({ user, onLogout, collapsed = false }) {
           title={collapsed ? "Account" : undefined}
           className={`rounded-xl transition-all hover:bg-[var(--hover)] ${
             collapsed
-              ? "flex h-12 w-12 items-center justify-center"
-              : "flex w-full items-center gap-3 px-3 py-2.5"
+              ? "flex h-11 w-11 items-center justify-center"
+              : "flex min-h-[62px] w-full items-center gap-3 px-3 py-2"
           }`}
         >
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--accent)]/15 text-sm font-semibold text-[var(--text)]">
@@ -55,8 +55,8 @@ function AccountSection({ user, onLogout, collapsed = false }) {
           {!collapsed ? (
             <>
               <div className="min-w-0 flex-1 text-left">
-                <p className="truncate text-sm font-medium text-[var(--text)]">{user?.name}</p>
-                <p className="truncate text-xs text-[var(--text-muted)]">{user?.email}</p>
+                <p className="truncate text-[14px] font-medium text-[var(--text)]">{user?.name}</p>
+                <p className="truncate text-[11px] text-[var(--text-muted)]">{user?.email}</p>
               </div>
               <svg
                 className={`h-4 w-4 text-[var(--text-muted)] transition-transform ${
@@ -79,7 +79,7 @@ function AccountSection({ user, onLogout, collapsed = false }) {
 
         {showMenu && (
           <div
-            className={`absolute z-50 mb-2 min-w-[200px] rounded-lg border border-[var(--border)] bg-[var(--surface)] py-1 shadow-lg ${
+            className={`absolute z-50 mb-2 min-w-[200px] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-lg ${
               collapsed ? "bottom-0 left-[calc(100%+12px)] w-56" : "bottom-full left-0 right-0"
             }`}
           >

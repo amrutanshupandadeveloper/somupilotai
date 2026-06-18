@@ -21,7 +21,23 @@ const formatRetryHint = (retryAfterSeconds) => {
 
 const getFriendlyAiErrorMessage = (apiError, fallbackMessage) => {
   const responseData = apiError?.response?.data;
-  const baseMessage = responseData?.message || fallbackMessage;
+  const errorType = responseData?.errorType;
+  const provider = responseData?.provider || responseData?.data?.provider;
+
+  let baseMessage = responseData?.message || fallbackMessage;
+
+  if (provider === "openrouter" && errorType === "model") {
+    baseMessage = "Selected OpenRouter model is not available. Try another free model.";
+  } else if (provider === "openrouter" && errorType === "auth") {
+    baseMessage = "OpenRouter API key is invalid or missing.";
+  } else if (provider === "openrouter" && errorType === "billing") {
+    baseMessage = "This OpenRouter model may require credits. Please choose a free model.";
+  } else if (provider === "openrouter" && errorType === "provider_rate_limit") {
+    baseMessage = "OpenRouter free model is temporarily rate-limited. Your SomuPilot credits were not used.";
+  } else if (provider === "openrouter" && errorType === "quota") {
+    baseMessage = "OpenRouter limit reached. Please try again later.";
+  }
+
   const retryHint = formatRetryHint(responseData?.retryAfterSeconds);
 
   return retryHint ? `${baseMessage} ${retryHint}` : baseMessage;

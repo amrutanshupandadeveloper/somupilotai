@@ -106,7 +106,7 @@ function MoreMenu({ isOpen, onClose, user, collapsed = false }) {
       className={
         collapsed
           ? "absolute left-[calc(100%+12px)] top-0 z-40 w-56 rounded-2xl border border-[var(--border)] bg-[var(--surface-glass)] p-2 shadow-2xl backdrop-blur-xl"
-          : "ml-3 mt-1 space-y-1 overflow-hidden transition-all duration-300"
+          : "ml-2 mt-1 space-y-1 overflow-hidden transition-all duration-300"
       }
     >
       {moreMenuItems.map((item) => (

@@ -19,6 +19,12 @@ import UserTopBarActions from "../components/UserTopBarActions";
 const formatProviderLabel = (provider) =>
   provider === "openrouter"
     ? "OpenRouter"
+    : provider === "huggingface"
+      ? "Hugging Face"
+      : provider === "mistral"
+        ? "Mistral"
+        : provider === "groq"
+          ? "Groq"
     : provider === "ollama"
       ? "Ollama"
       : provider.charAt(0).toUpperCase() + provider.slice(1);
@@ -224,6 +230,11 @@ function SettingsPage() {
                         <p className="mt-3 text-xs leading-6 text-[var(--text-muted)]">
                           Model: {details.model || "Not set"}
                         </p>
+                        {providerStatus?.cooldowns?.[provider] ? (
+                          <p className="mt-2 text-xs leading-6 text-amber-300">
+                            Cooling down {providerStatus.cooldowns[provider].retryAfterSeconds}s
+                          </p>
+                        ) : null}
                         {details.local ? (
                           <p className="mt-2 text-xs leading-6 text-[var(--text-muted)]">
                             Endpoint: {details.baseUrl}

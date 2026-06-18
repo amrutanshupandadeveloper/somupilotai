@@ -36,6 +36,26 @@ const conversationMessageSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    providerPreset: {
+      type: String,
+      default: "",
+    },
+    sources: {
+      type: [
+        new mongoose.Schema(
+          {
+            title: { type: String, default: "" },
+            url: { type: String, default: "" },
+            domain: { type: String, default: "" },
+            snippet: { type: String, default: "" },
+            faviconUrl: { type: String, default: "" },
+            sourceType: { type: String, default: "web" },
+          },
+          { _id: false }
+        ),
+      ],
+      default: [],
+    },
     documentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Document",

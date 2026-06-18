@@ -26,11 +26,19 @@ const sendError = (res, message, statusCode = 500, data = null) => {
       payload.retryAfterSeconds = data.retryAfterSeconds;
     }
 
+    if (data.provider) {
+      payload.provider = data.provider;
+    }
+
+    if (data.model) {
+      payload.model = data.model;
+    }
+
     if (data.usage) {
       payload.usage = data.usage;
     }
 
-    const { errorType, retryAfterSeconds, usage, ...rest } = data;
+    const { errorType, retryAfterSeconds, usage, provider, model, ...rest } = data;
 
     if (Object.keys(rest).length > 0) {
       payload.data = rest;

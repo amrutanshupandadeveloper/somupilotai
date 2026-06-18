@@ -31,6 +31,7 @@ import {
   searchNotesTool,
 } from "../services/agentTools.service.js";
 import { getRelevantMemories, listMemories } from "../services/memory.service.js";
+import { needsWebSearch, searchWeb } from "../services/webSearch.service.js";
 
 const detectToolIntent = (message) => {
   const lowerMessage = message.toLowerCase();
@@ -226,7 +227,15 @@ const extractForgetTarget = (message) => {
 };
 
 const sendMessage = asyncHandler(async (req, res) => {
-  const { message, conversationId, model, documentId } = req.body;
+  const {
+    message,
+    conversationId,
+    model,
+    selectedProvider,
+    selectedModelLevel,
+    selectedModel,
+    documentId,
+  } = req.body;
 
   validateMessage(message);
   const usage = await resetCreditsIfNeeded(req.user._id);
@@ -263,8 +272,19 @@ const sendMessage = asyncHandler(async (req, res) => {
 
   let conversation;
   const trimmedMessage = message.trim();
-  const requestedProvider = model ? String(model).trim().toLowerCase() : "auto";
+  const requestedProvider = selectedProvider
+    ? String(selectedProvider).trim().toLowerCase()
+    : model
+      ? String(model).trim().toLowerCase()
+      : "auto";
   const provider = requestedProvider || (process.env.AI_PROVIDER || "auto").toLowerCase();
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("Provider selected:", requestedProvider || "auto");
+    console.log("Calling OpenRouter:", requestedProvider === "openrouter");
+    console.log("Model:", process.env.OPENROUTER_MODEL || process.env.AI_MODEL || "");
+    console.log("Key exists:", !!process.env.OPENROUTER_API_KEY);
+  }
 
   if (conversationId) {
     conversation = await getConversationByIdForUser({
@@ -286,6 +306,9 @@ const sendMessage = asyncHandler(async (req, res) => {
   let assistantReply = "";
   let providerUsed = "";
   let providerModel = "";
+  let providerPreset = "";
+  let sources = [];
+  let webSearchWarning = "";
   let toolMetadata = {
     toolUsed: false,
     toolName: "",
@@ -547,6 +570,32 @@ const sendMessage = asyncHandler(async (req, res) => {
       systemPrompt += `- If the PDF doesn't contain the answer but it's general knowledge, you may still answer but mention it's outside the PDF.\n\n`;
     }
 
+    const shouldUseWebSearch = needsWebSearch(trimmedMessage);
+
+    if (shouldUseWebSearch) {
+      const webSearchResult = await searchWeb(trimmedMessage);
+
+      if (webSearchResult.success && webSearchResult.sources.length > 0) {
+        sources = webSearchResult.sources.slice(0, 5);
+        const webSourceContext = sources
+          .map(
+            (source, index) =>
+              `[Source ${index + 1}] ${source.title}\nURL: ${source.url}\nSnippet: ${source.snippet}`
+          )
+          .join("\n\n");
+
+        systemPrompt += `\nLive web search sources:\n${webSourceContext}\n\n`;
+        systemPrompt += "When using web search context, cite the source domains naturally in the answer when helpful.\n";
+        toolMetadata = {
+          toolUsed: true,
+          toolName: "web_search",
+          toolStatus: "success",
+        };
+      } else if (webSearchResult.message) {
+        webSearchWarning = "Web search could not complete, so I answered without live sources.";
+      }
+    }
+
     systemPrompt += `Rules:\n`;
     systemPrompt += `- If the user asks their name, answer from the user profile.\n`;
     systemPrompt += `- If the user asks what you remember, answer using saved memories.\n`;
@@ -569,13 +618,23 @@ const sendMessage = asyncHandler(async (req, res) => {
         messages: messagesWithContext,
         systemPrompt,
         overrideProvider: requestedProvider,
+        overrideModel: selectedModel,
+        selectedModelLevel,
       });
       assistantReply = aiResponse.text;
+      if (webSearchWarning) {
+        assistantReply = `${webSearchWarning}\n\n${assistantReply}`;
+      }
       providerUsed = aiResponse.provider;
       providerModel = aiResponse.model;
+      providerPreset = aiResponse.preset || "";
       conversation.provider = providerUsed || provider;
     } catch (error) {
       const currentUsage = await resetCreditsIfNeeded(req.user._id);
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("AI credits deducted:", false);
+      }
 
       if (error.statusCode) {
         throw createHttpError(error.statusCode, error.message, {
@@ -594,6 +653,10 @@ const sendMessage = asyncHandler(async (req, res) => {
   const updatedUsage = toolIntent
     ? usage
     : await consumeAiCredit(req.user._id);
+
+  if (process.env.NODE_ENV === "development" && !toolIntent) {
+    console.log("AI credits deducted:", true);
+  }
   
   // Append user message
   conversation.messages.push({
@@ -614,6 +677,8 @@ const sendMessage = asyncHandler(async (req, res) => {
     toolStatus: toolMetadata.toolStatus,
     providerUsed,
     providerModel,
+    providerPreset,
+    sources,
   });
 
   await conversation.save();
@@ -629,6 +694,8 @@ const sendMessage = asyncHandler(async (req, res) => {
       toolStatus: toolMetadata.toolStatus,
       providerUsed,
       providerModel,
+      providerPreset,
+      sources,
     },
     conversation: sanitizeConversation(conversation),
     usage: sanitizeUsage(updatedUsage),
