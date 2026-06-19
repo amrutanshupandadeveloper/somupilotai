@@ -1,8 +1,18 @@
 import { useState } from "react";
+import { MessageCircle, MoreHorizontal, Pin, PinOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ChatItemActionMenu from "./ChatItemActionMenu";
 
-function ChatHistoryItem({ conversation, isActive, onSelect, onPin, onUnpin, onDelete, onRename }) {
+function ChatHistoryItem({
+  conversation,
+  isActive,
+  onSelect,
+  onPin,
+  onUnpin,
+  onDelete,
+  onRename,
+  showLeadingIcon = false,
+}) {
   const [showMenu, setShowMenu] = useState(false);
   const navigate = useNavigate();
 
@@ -27,71 +37,50 @@ function ChatHistoryItem({ conversation, isActive, onSelect, onPin, onUnpin, onD
 
   return (
     <div className="relative group">
-      <button
-        onClick={handleClick}
-        className={`flex min-h-[42px] w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-all ${
+      <div
+        className={`flex min-h-[42px] w-full items-center gap-2 rounded-2xl px-3 py-2 transition-all ${
           isActive
-            ? "bg-teal-500/10 text-teal-400"
+            ? "text-[var(--sidebar-active-text)]"
             : "text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)]"
         }`}
+        style={isActive ? { backgroundColor: "var(--sidebar-active-bg)" } : undefined}
       >
-        <svg
-          className="w-4 h-4 flex-shrink-0"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+        {showLeadingIcon ? (
+          <span className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center text-[var(--text)]">
+            <MessageCircle className="h-[18px] w-[18px]" strokeWidth={1.9} />
+          </span>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={handleClick}
+          className="text-glow-soft min-w-0 flex-1 truncate text-left text-[14px] font-semibold"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-          />
-        </svg>
-        <span className="flex-1 truncate text-[13px]">{conversation.title}</span>
+          {conversation.title}
+        </button>
         
         <button
+          type="button"
           onClick={handlePinClick}
-          className={`rounded p-1 opacity-0 transition-opacity hover:bg-[var(--hover)] group-hover:opacity-100 ${
-            conversation.isPinned ? "opacity-100 text-teal-400" : ""
-          }`}
+          className="rounded-lg p-1 opacity-0 transition-opacity hover:bg-[var(--hover)] group-hover:opacity-100"
           title={conversation.isPinned ? "Unpin" : "Pin"}
         >
-          <svg
-            className="w-4 h-4"
-            fill={conversation.isPinned ? "currentColor" : "none"}
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-            />
-          </svg>
+          {conversation.isPinned ? (
+            <PinOff className="h-4 w-4 rotate-[18deg] text-[var(--text)]" strokeWidth={1.9} />
+          ) : (
+            <Pin className="h-4 w-4 rotate-[18deg]" strokeWidth={1.9} />
+          )}
         </button>
 
         <button
+          type="button"
           onClick={handleMenuClick}
-          className="rounded p-1 opacity-0 transition-opacity hover:bg-[var(--hover)] group-hover:opacity-100"
+          className="rounded-lg p-1 opacity-0 transition-opacity hover:bg-[var(--hover)] group-hover:opacity-100"
           title="More options"
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-            />
-          </svg>
+          <MoreHorizontal className="h-4 w-4" strokeWidth={1.9} />
         </button>
-      </button>
+      </div>
 
       <ChatItemActionMenu
         isOpen={showMenu}

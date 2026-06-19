@@ -32,7 +32,7 @@ const formatProviderLabel = (provider) =>
 function SettingsPage() {
   const { setTopBarConfig, resetTopBarConfig } = useOutletContext();
   const { user, usage, logout } = useAuth();
-  const { theme, setTheme, toggleTheme } = useTheme();
+  const { theme, themeMode, resolvedTheme, setTheme } = useTheme();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [providerStatus, setProviderStatus] = useState(null);
   const [providerError, setProviderError] = useState("");
@@ -106,7 +106,7 @@ function SettingsPage() {
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button
                   size="sm"
-                  variant={theme === "dark" ? "primary" : "secondary"}
+                  variant={themeMode === "dark" ? "primary" : "secondary"}
                   onClick={(event) => setTheme("dark", event)}
                 >
                   <span aria-hidden="true">{"\u263E"}</span>
@@ -114,15 +114,19 @@ function SettingsPage() {
                 </Button>
                 <Button
                   size="sm"
-                  variant={theme === "light" ? "primary" : "secondary"}
+                  variant={themeMode === "light" ? "primary" : "secondary"}
                   onClick={(event) => setTheme("light", event)}
                 >
                   <span aria-hidden="true">{"\u2600"}</span>
                   Light
                 </Button>
-                <Button size="sm" variant="ghost" onClick={(event) => toggleTheme(event)}>
-                  <span aria-hidden="true">{theme === "dark" ? "\u2600" : "\u263E"}</span>
-                  Toggle
+                <Button
+                  size="sm"
+                  variant={themeMode === "system" ? "primary" : "secondary"}
+                  onClick={(event) => setTheme("system", event)}
+                >
+                  <span aria-hidden="true">{"\u25C8"}</span>
+                  System
                 </Button>
               </div>
             </div>
@@ -140,7 +144,11 @@ function SettingsPage() {
             <div className="rounded-[24px] border border-[var(--border)] bg-white/5 p-4">
               <p className="text-sm font-semibold text-[var(--text)]">Current theme</p>
               <p className="mt-2 text-sm text-[var(--text-muted)]">
-                {theme === "dark" ? "Dark mode enabled" : "Light mode enabled"}
+                {themeMode === "system"
+                  ? `System mode enabled (${resolvedTheme === "dark" ? "dark" : "light"} active)`
+                  : theme === "dark"
+                    ? "Dark mode enabled"
+                    : "Light mode enabled"}
               </p>
             </div>
           </div>

@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../context/ThemeContext";
 import AppSidebar from "../components/AppSidebar";
 import TopBar from "../components/TopBar";
+import UpgradeModal from "../components/ui/UpgradeModal";
 
 const pageTitles = {
   "/dashboard": "Dashboard",
@@ -23,10 +24,13 @@ const pageTitles = {
 function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [topBarConfig, setTopBarConfig] = useState({});
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [showTopBarBorder, setShowTopBarBorder] = useState(false);
   const { user, logout, usage, usageCountdown } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, themeMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const mainRef = useRef(null);
 
   const handleLogout = async () => {
     await logout();
@@ -37,9 +41,28 @@ function DashboardLayout() {
       setTopBarConfig,
       resetTopBarConfig: () => setTopBarConfig({}),
       onMenuOpen: () => setIsSidebarOpen(true),
+      openUpgradeModal: () => setIsUpgradeModalOpen(true),
     }),
     []
   );
+
+  useEffect(() => {
+    const element = mainRef.current;
+    if (!element) {
+      return undefined;
+    }
+
+    const handleScroll = () => {
+      setShowTopBarBorder(element.scrollTop > 6);
+    };
+
+    handleScroll();
+    element.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      element.removeEventListener("scroll", handleScroll);
+    };
+  }, [location.pathname]);
 
   return (
     <div className="app-shell flex h-screen overflow-hidden bg-black">
@@ -74,6 +97,7 @@ function DashboardLayout() {
             usage={usage}
             usageCountdown={usageCountdown}
             theme={theme}
+            themeMode={themeMode}
             onToggleTheme={toggleTheme}
             onMenuOpen={() => setIsSidebarOpen(true)}
             compact={topBarConfig.compact !== false}
@@ -81,13 +105,18 @@ function DashboardLayout() {
             showUsage={topBarConfig.showUsage !== false}
             showThemeToggle={topBarConfig.showThemeToggle !== false}
             rightSlot={topBarConfig.rightSlot || null}
+            showBorder={topBarConfig.showBorder ?? showTopBarBorder}
           />
 
-          <main className="min-w-0 flex-1 overflow-y-auto px-4 py-5 sm:px-5 xl:px-6">
+          <main ref={mainRef} className="min-w-0 flex-1 overflow-y-auto px-4 py-5 sm:px-5 xl:px-6">
             <Outlet context={outletContext} />
           </main>
         </div>
       </div>
+      <UpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+      />
     </div>
   );
 }

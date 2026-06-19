@@ -1,5 +1,6 @@
 const MODEL_PRESET_STORAGE_KEY = "somupilot:selectedModelPreset";
 const LEGACY_MODEL_STORAGE_KEY = "somupilot_ai_model_preference";
+const MODEL_SELECTION_STORAGE_KEY = "somupilot:selectedModelSelection";
 
 const MODEL_PRESET_ORDER = ["auto", "high", "medium", "low"];
 
@@ -88,6 +89,58 @@ const persistModelPreset = (presetKey) => {
   window.localStorage.removeItem(LEGACY_MODEL_STORAGE_KEY);
 };
 
+const getStoredModelSelection = () => {
+  if (typeof window === "undefined") {
+    return {
+      mode: "preset",
+      preset: "auto",
+      provider: "",
+      model: "",
+    };
+  }
+
+  const rawValue = window.localStorage.getItem(MODEL_SELECTION_STORAGE_KEY);
+
+  if (rawValue) {
+    try {
+      const parsedValue = JSON.parse(rawValue);
+      const mode = parsedValue?.mode === "custom" ? "custom" : "preset";
+
+      return {
+        mode,
+        preset: normalizeModelPreset(parsedValue?.preset || "auto"),
+        provider: String(parsedValue?.provider || "").trim().toLowerCase(),
+        model: String(parsedValue?.model || "").trim(),
+      };
+    } catch (_error) {
+      // fall through to legacy preset
+    }
+  }
+
+  return {
+    mode: "preset",
+    preset: getStoredModelPreset(),
+    provider: "",
+    model: "",
+  };
+};
+
+const persistModelSelection = (selection) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const nextSelection = {
+    mode: selection?.mode === "custom" ? "custom" : "preset",
+    preset: normalizeModelPreset(selection?.preset || "auto"),
+    provider: String(selection?.provider || "").trim().toLowerCase(),
+    model: String(selection?.model || "").trim(),
+  };
+
+  window.localStorage.setItem(MODEL_SELECTION_STORAGE_KEY, JSON.stringify(nextSelection));
+  persistModelPreset(nextSelection.preset);
+};
+
 const formatProviderName = (provider) => {
   const normalizedProvider = String(provider || "").trim().toLowerCase();
 
@@ -149,14 +202,44 @@ const buildModelPresetOptions = (providerStatus) =>
     };
   });
 
+const buildProviderModelOptions = (providerStatus) => {
+  const providers = providerStatus?.providers || {};
+
+  return Object.entries(providers).map(([providerKey, providerConfig]) => ({
+    key: providerKey,
+    provider: providerKey,
+    label: formatProviderName(providerKey),
+    modelName:
+      providerConfig?.modelDisplayName ||
+      providerConfig?.modelName ||
+      prettifyModelName(providerConfig?.model),
+    configured:
+      providerKey === "ollama" ? true : Boolean(providerConfig?.configured),
+    cooldown: providerStatus?.cooldowns?.[providerKey] || null,
+    status:
+      providerKey === "ollama"
+        ? "local_only"
+        : providerStatus?.cooldowns?.[providerKey]
+          ? "cooling_down"
+          : providerConfig?.configured
+            ? "available"
+            : "not_configured",
+    model: providerConfig?.model || "",
+  }));
+};
+
 export {
   BASE_MODEL_PRESETS,
   MODEL_PRESET_ORDER,
+  MODEL_SELECTION_STORAGE_KEY,
   MODEL_PRESET_STORAGE_KEY,
+  buildProviderModelOptions,
   buildModelPresetOptions,
   formatProviderName,
   getStoredModelPreset,
+  getStoredModelSelection,
   normalizeModelPreset,
+  persistModelSelection,
   persistModelPreset,
   prettifyModelName,
 };

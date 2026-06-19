@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useOutletContext, useSearchParams } from "react-router-dom";
+import {
+  Copy,
+  Download,
+  EllipsisVertical,
+  ExternalLink,
+  Pencil,
+  Pin,
+  PinOff,
+  Search,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import ChatComposer from "../components/ChatComposer";
 import ChatMessageBubble from "../components/ChatMessageBubble";
 import ThinkingIndicator from "../components/ThinkingIndicator";
@@ -13,11 +25,13 @@ import { ConfirmModal } from "../components/ui/ConfirmModal";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import {
+  buildProviderModelOptions,
   buildModelPresetOptions,
-  getStoredModelPreset,
+  getStoredModelSelection,
   normalizeModelPreset,
-  persistModelPreset,
+  persistModelSelection,
 } from "../utils/modelPresets";
+import { generateChatTitleFromInput } from "../utils/chatTitle";
 
 const suggestedPrompts = [
   "Plan my study day",
@@ -95,6 +109,10 @@ function ChatTopBarActions({
 
   const actionButtonClass =
     "inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--border)] bg-white/5 text-[var(--text-muted)] transition hover:bg-white/10 hover:text-[var(--text)]";
+  const shareButtonClass =
+    "inline-flex h-10 items-center gap-2 rounded-2xl px-1.5 text-sm font-semibold text-[var(--text)] transition hover:text-white";
+  const menuItemClass =
+    "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-[var(--text)] transition hover:bg-white/5";
 
   return (
     <div className="flex items-center gap-2" ref={actionsRef}>
@@ -109,7 +127,7 @@ function ChatTopBarActions({
       <div className="relative">
         <button
           type="button"
-          className={actionButtonClass}
+          className={shareButtonClass}
           onClick={() => {
             setIsShareOpen((current) => !current);
             setIsMenuOpen(false);
@@ -117,14 +135,8 @@ function ChatTopBarActions({
           aria-label="Share"
           title="Share"
         >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8.684 13.342C9.886 12.511 11.326 12 12.88 12c1.554 0 2.994.511 4.196 1.342M8.684 10.658C9.886 11.489 11.326 12 12.88 12c1.554 0 2.994-.511 4.196-1.342M10 6a2 2 0 11-4 0 2 2 0 014 0zm12 12a2 2 0 11-4 0 2 2 0 014 0zm-12 0a2 2 0 11-4 0 2 2 0 014 0z"
-            />
-          </svg>
+          <Upload className="h-4 w-4" strokeWidth={2} />
+          <span>Share</span>
         </button>
 
         {isShareOpen ? (
@@ -135,8 +147,9 @@ function ChatTopBarActions({
                 onCopyLink();
                 setIsShareOpen(false);
               }}
-              className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-[var(--text)] transition hover:bg-white/5"
+              className={menuItemClass}
             >
+              <ExternalLink className="h-4 w-4 text-[var(--text-muted)]" strokeWidth={2} />
               Copy chat link
             </button>
             <button
@@ -145,8 +158,9 @@ function ChatTopBarActions({
                 onCopyConversation();
                 setIsShareOpen(false);
               }}
-              className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-[var(--text)] transition hover:bg-white/5"
+              className={menuItemClass}
             >
+              <Copy className="h-4 w-4 text-[var(--text-muted)]" strokeWidth={2} />
               Copy conversation text
             </button>
             <button
@@ -155,8 +169,9 @@ function ChatTopBarActions({
                 onExportConversation();
                 setIsShareOpen(false);
               }}
-              className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-[var(--text)] transition hover:bg-white/5"
+              className={menuItemClass}
             >
+              <Download className="h-4 w-4 text-[var(--text-muted)]" strokeWidth={2} />
               Export as text
             </button>
             <button
@@ -165,8 +180,9 @@ function ChatTopBarActions({
                 onExportMarkdown();
                 setIsShareOpen(false);
               }}
-              className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-[var(--text)] transition hover:bg-white/5"
+              className={menuItemClass}
             >
+              <Download className="h-4 w-4 text-[var(--text-muted)]" strokeWidth={2} />
               Export as markdown
             </button>
           </div>
@@ -184,14 +200,7 @@ function ChatTopBarActions({
           aria-label="Chat options"
           title="Chat options"
         >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-            />
-          </svg>
+          <EllipsisVertical className="h-4 w-4" strokeWidth={2} />
         </button>
 
         {isMenuOpen ? (
@@ -203,8 +212,9 @@ function ChatTopBarActions({
                 setIsMenuOpen(false);
               }}
               disabled={!activeConversation?._id}
-              className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-[var(--text)] transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+              className={`${menuItemClass} disabled:cursor-not-allowed disabled:opacity-50`}
             >
+              <Pencil className="h-4 w-4 text-[var(--text-muted)]" strokeWidth={2} />
               Rename chat
             </button>
             <button
@@ -214,8 +224,13 @@ function ChatTopBarActions({
                 setIsMenuOpen(false);
               }}
               disabled={!activeConversation?._id}
-              className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-[var(--text)] transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+              className={`${menuItemClass} disabled:cursor-not-allowed disabled:opacity-50`}
             >
+              {activeConversation?.isPinned ? (
+                <PinOff className="h-4 w-4 text-[var(--text-muted)]" strokeWidth={2} />
+              ) : (
+                <Pin className="h-4 w-4 text-[var(--text-muted)]" strokeWidth={2} />
+              )}
               {activeConversation?.isPinned ? "Unpin chat" : "Pin chat"}
             </button>
             <button
@@ -224,8 +239,9 @@ function ChatTopBarActions({
                 onSearchToggle();
                 setIsMenuOpen(false);
               }}
-              className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-[var(--text)] transition hover:bg-white/5"
+              className={menuItemClass}
             >
+              <Search className="h-4 w-4 text-[var(--text-muted)]" strokeWidth={2} />
               Search in chat
             </button>
             <button
@@ -234,8 +250,9 @@ function ChatTopBarActions({
                 onExportConversation();
                 setIsMenuOpen(false);
               }}
-              className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-[var(--text)] transition hover:bg-white/5"
+              className={menuItemClass}
             >
+              <Download className="h-4 w-4 text-[var(--text-muted)]" strokeWidth={2} />
               Export chat
             </button>
             <button
@@ -245,8 +262,9 @@ function ChatTopBarActions({
                 setIsMenuOpen(false);
               }}
               disabled={!activeConversation?._id}
-              className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-rose-300 transition hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-rose-300 transition hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
+              <Trash2 className="h-4 w-4" strokeWidth={2} />
               Delete chat
             </button>
           </div>
@@ -266,7 +284,7 @@ function ChatTopBarActions({
 
 function ChatPage() {
   const { user, usage, usageCountdown, setUsage, refreshUsageSafely } = useAuth();
-  const { setTopBarConfig, resetTopBarConfig } = useOutletContext();
+  const { setTopBarConfig, resetTopBarConfig, openUpgradeModal } = useOutletContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeConversation, setActiveConversation] = useState(null);
   const [draftMessage, setDraftMessage] = useState("");
@@ -286,7 +304,8 @@ function ChatPage() {
   const [providerRateLimitUntil, setProviderRateLimitUntil] = useState(null);
   const [providerRateLimitTick, setProviderRateLimitTick] = useState(0);
   const [providerStatus, setProviderStatus] = useState(null);
-  const [selectedPreset, setSelectedPreset] = useState(getStoredModelPreset);
+  const [selectedModelSelection, setSelectedModelSelection] = useState(getStoredModelSelection);
+  const [showChatTopBorder, setShowChatTopBorder] = useState(false);
   const [thinkingState, setThinkingState] = useState({
     active: false,
     status: "thinking",
@@ -303,8 +322,14 @@ function ChatPage() {
     () => buildModelPresetOptions(providerStatus),
     [providerStatus]
   );
+  const providerModelOptions = useMemo(
+    () => buildProviderModelOptions(providerStatus),
+    [providerStatus]
+  );
   const activePresetOption =
-    modelPresetOptions.find((option) => option.key === selectedPreset) || modelPresetOptions[0];
+    modelPresetOptions.find((option) => option.key === selectedModelSelection.preset) || modelPresetOptions[0];
+  const activeProviderOption =
+    providerModelOptions.find((option) => option.provider === selectedModelSelection.provider) || null;
 
   const conversationText = useMemo(
     () =>
@@ -324,6 +349,15 @@ function ChatPage() {
         .join("\n\n"),
     [currentMessages, user?.name]
   );
+
+  useEffect(() => {
+    const activeTitle = String(activeConversation?.title || "").trim();
+    document.title = activeTitle ? `${activeTitle} | SomuPilot AI` : "Chat | SomuPilot AI";
+
+    return () => {
+      document.title = "SomuPilot AI";
+    };
+  }, [activeConversation?.title]);
 
   useEffect(() => {
     refreshUsageSafely().catch(() => {});
@@ -413,6 +447,7 @@ function ChatPage() {
       const { scrollTop, scrollHeight, clientHeight } = container;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
       setIsNearBottom(distanceFromBottom < 120);
+      setShowChatTopBorder(scrollTop > 6);
     };
 
     container.addEventListener("scroll", handleScroll);
@@ -582,6 +617,7 @@ function ChatPage() {
       compact: true,
       showSignedIn: false,
       showUsage: false,
+      showBorder: showChatTopBorder,
       rightSlot: (
         <ChatTopBarActions
           activeConversation={activeConversation}
@@ -606,9 +642,14 @@ function ChatPage() {
     return () => {
       resetTopBarConfig();
     };
-  }, [activeConversation, usage, usageCountdown, conversationText, toastMessage]);
+  }, [activeConversation, usage, usageCountdown, conversationText, toastMessage, showChatTopBorder]);
 
   const handleSend = async (prefilledMessage = null) => {
+    if (usage?.aiCredits === 0) {
+      setError(`Your AI credits are finished. Please wait until credits renew in ${usageCountdown}.`);
+      return;
+    }
+
     const messageToSend = (prefilledMessage ?? draftMessage).trim();
 
     if (!messageToSend || isSending) {
@@ -675,7 +716,7 @@ function ChatPage() {
           }
         : {
             _id: activeConversationId || "pending",
-            title: "New Chat",
+            title: generateChatTitleFromInput(messageToSend),
             provider: "auto",
             messages: [optimisticUserMessage],
             createdAt: new Date().toISOString(),
@@ -688,9 +729,16 @@ function ChatPage() {
         messageToSend,
         activeConversationId,
         {
-          selectedProvider: activePresetOption?.provider || "auto",
-          selectedModelLevel: activePresetOption?.key || "auto",
-          selectedModel: activePresetOption?.model || "",
+          selectedProvider:
+            selectedModelSelection.mode === "custom"
+              ? activeProviderOption?.provider || "auto"
+              : activePresetOption?.provider || "auto",
+          selectedModelLevel:
+            selectedModelSelection.mode === "custom" ? "" : activePresetOption?.key || "auto",
+          selectedModel:
+            selectedModelSelection.mode === "custom"
+              ? activeProviderOption?.model || ""
+              : activePresetOption?.model || "",
           documentId,
           signal: abortControllerRef.current.signal,
         }
@@ -768,10 +816,24 @@ function ChatPage() {
     }
   };
 
-  const handleProviderChange = (nextPreset) => {
-    const normalizedPreset = normalizeModelPreset(nextPreset);
-    setSelectedPreset(normalizedPreset);
-    persistModelPreset(normalizedPreset);
+  const handleProviderChange = (nextSelection) => {
+    const normalizedSelection =
+      nextSelection?.mode === "custom"
+        ? {
+            mode: "custom",
+            preset: normalizeModelPreset(nextSelection.preset || selectedModelSelection.preset || "auto"),
+            provider: nextSelection.provider || "",
+            model: nextSelection.model || "",
+          }
+        : {
+            mode: "preset",
+            preset: normalizeModelPreset(nextSelection?.preset || "auto"),
+            provider: "",
+            model: "",
+          };
+
+    setSelectedModelSelection(normalizedSelection);
+    persistModelSelection(normalizedSelection);
     setError("");
     setProviderRateLimitUntil(null);
     getAiProviderStatus()
@@ -806,10 +868,56 @@ function ChatPage() {
 
   return (
     <>
-      <section className="app-card flex h-full min-h-0 flex-col overflow-hidden rounded-[32px]">
+      <section
+        className="app-card relative -mx-4 -my-5 flex h-[calc(100%+2.5rem)] min-h-0 flex-col overflow-hidden rounded-none border-t-0 sm:-mx-5 xl:-mx-6"
+        style={{ backgroundColor: "var(--surface-strong)", borderTopColor: "transparent" }}
+      >
+        {error ? (
+          <div className="pointer-events-none absolute left-0 right-0 top-3 z-30 px-4 sm:px-6">
+            <div className="mx-auto max-w-[860px]">
+              <div className="pointer-events-auto rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 shadow-[0_20px_48px_rgba(0,0,0,0.34)] backdrop-blur-xl">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex-1">
+                    <p>{error}</p>
+                    {providerRateLimitUntil ? (
+                      <p className="mt-1 text-xs text-rose-200/80">
+                        Retry unlocked in {providerRateLimitCountdown || "0s"}.
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleRetryAfterError}
+                      disabled={isSending}
+                    >
+                      Try again
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => setError("")}
+                      className="rounded-full p-1.5 text-rose-300 hover:bg-white/5 hover:text-rose-100 transition duration-150 active:scale-95"
+                      aria-label="Dismiss error"
+                    >
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+
         <div
           ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6 sm:px-6"
+          className={`no-scrollbar flex-1 overflow-y-auto overflow-x-hidden rounded-none bg-black px-4 py-6 sm:px-6 ${
+            error ? "pt-28 sm:pt-24" : ""
+          }`}
+          style={{ backgroundColor: "var(--chat-canvas)" }}
         >
           <div className="mx-auto max-w-[860px]">
             {searchOpen ? (
@@ -821,35 +929,6 @@ function ChatPage() {
                   placeholder="Search in this chat..."
                   className="w-full bg-transparent text-sm text-[var(--text)] outline-none placeholder:text-[var(--text-muted)]"
                 />
-              </div>
-            ) : null}
-
-            {error ? (
-              <div className="mb-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p>{error}</p>
-                    {providerRateLimitUntil ? (
-                      <p className="mt-1 text-xs text-rose-200/80">
-                        Retry unlocked in {providerRateLimitCountdown || "0s"}.
-                      </p>
-                    ) : null}
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleRetryAfterError}
-                    disabled={isSending}
-                  >
-                    Try again
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-
-            {usage?.aiCredits === 0 ? (
-              <div className="mb-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-                Your AI credits are finished. Please wait until credits renew in {usageCountdown}.
               </div>
             ) : null}
 
@@ -889,11 +968,12 @@ function ChatPage() {
                     <button
                       key={prompt}
                       type="button"
+                      disabled={usage?.aiCredits === 0}
                       onClick={() => {
                         setDraftMessage(prompt);
                         handleSend(prompt);
                       }}
-                      className="rounded-[24px] border border-[var(--border)] bg-white/5 px-5 py-4 text-left text-sm text-[var(--text-soft)] transition hover:border-[var(--border-strong)] hover:bg-white/8"
+                      className="rounded-[24px] border border-[var(--border)] bg-white/5 px-5 py-4 text-left text-sm text-[var(--text-soft)] shadow-[0_0_0_rgba(0,0,0,0)] transition duration-200 hover:-translate-y-1 hover:border-teal-400/20 hover:bg-white/8 hover:shadow-[0_16px_32px_rgba(0,0,0,0.28)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:border-[var(--border)] disabled:hover:bg-white/5 disabled:hover:shadow-none"
                     >
                       {prompt}
                     </button>
@@ -901,7 +981,7 @@ function ChatPage() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-4 pb-24">
+              <div className="space-y-4 pb-40 sm:pb-44">
                 {currentMessages.map((message, index) => (
                   (() => {
                     const isSearchMatch = !searchQuery.trim()
@@ -949,34 +1029,62 @@ function ChatPage() {
           onScrollToBottom={() => setIsNearBottom(true)}
         />
 
-        <div className="shrink-0">
-          <ChatComposer
-            value={draftMessage}
-            onChange={setDraftMessage}
-            onSubmit={() => handleSend()}
-            onProviderChange={handleProviderChange}
-            selectedPreset={selectedPreset}
-            isSending={isSending}
-            disabled={isLoadingMessages || usage?.aiCredits === 0}
-            helperText={
-              usage?.aiCredits === 0
-                ? `Credits renew in ${usageCountdown}.`
-                : usage
-                  ? `${usage.aiCredits}/${usage.maxAiCredits} AI credits available.`
-                  : ""
-            }
-            usage={usage}
-            usageCountdown={usageCountdown}
-            onUsageUpdate={setUsage}
-            providerStatus={providerStatus}
-            onStop={handleStopGenerating}
-            attachedFile={attachedFile}
-            setAttachedFile={setAttachedFile}
-            attachmentStatus={attachmentStatus}
-            setAttachmentStatus={setAttachmentStatus}
-            isUploading={isUploading}
-            setIsUploading={setIsUploading}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20">
+          <div
+            className="absolute inset-x-0 bottom-0 h-28 sm:h-32"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.06) 22%, var(--chat-canvas) 58%, var(--chat-canvas) 100%)",
+            }}
           />
+          {!error && usage?.aiCredits === 0 ? (
+            <div className="pointer-events-auto mx-auto mb-3.5 max-w-[900px] px-4 xl:px-6 animate-[fade-in_180ms_ease-out]">
+              <div className="flex items-center justify-between gap-4 rounded-[24px] border border-zinc-800/80 bg-zinc-950/90 px-4 py-3 shadow-[0_20px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:px-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_0_12px_rgba(245,158,11,0.15)]">
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-zinc-100">You're out of SomuPilot credits</h4>
+                    <p className="mt-0.5 text-xs text-zinc-400 leading-normal">
+                      Your rate limit resets in {usageCountdown}. Upgrade now to get unlimited credits.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openUpgradeModal?.()}
+                  className="rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-zinc-950 transition hover:bg-zinc-200 active:scale-95 shadow-[0_4px_12px_rgba(255,255,255,0.2)] shrink-0"
+                >
+                  Upgrade
+                </button>
+              </div>
+            </div>
+          ) : null}
+          <div className="pointer-events-auto">
+            <ChatComposer
+              value={draftMessage}
+              onChange={setDraftMessage}
+              onSubmit={() => handleSend()}
+              onProviderChange={handleProviderChange}
+              selectedModelSelection={selectedModelSelection}
+              isSending={isSending}
+              disabled={isLoadingMessages || usage?.aiCredits === 0}
+              onUsageUpdate={setUsage}
+              providerStatus={providerStatus}
+              onStop={handleStopGenerating}
+              attachedFile={attachedFile}
+              setAttachedFile={setAttachedFile}
+              attachmentStatus={attachmentStatus}
+              setAttachmentStatus={setAttachmentStatus}
+              isUploading={isUploading}
+              setIsUploading={setIsUploading}
+            />
+          </div>
         </div>
       </section>
 

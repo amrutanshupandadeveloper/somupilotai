@@ -51,15 +51,17 @@ function ScrollToBottom({ scrollContainerRef, onScrollToBottom }) {
   return (
     <button
       onClick={handleClick}
-      className="fixed bottom-32 left-1/2 z-30 -translate-x-1/2 rounded-full border border-[var(--border)] p-2.5 transition-all hover:scale-105 hover:border-[var(--border-strong)]"
+      className="fixed bottom-32 left-1/2 z-30 -translate-x-1/2 rounded-full border p-2 backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:scale-105"
       style={{
-        backgroundColor: "var(--surface-elevated)",
-        boxShadow: "0 10px 24px rgba(0, 0, 0, 0.22)",
+        background:
+          "linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03))",
+        borderColor: "rgba(255,255,255,0.1)",
+        boxShadow: "0 12px 28px rgba(0, 0, 0, 0.32)",
       }}
       aria-label="Scroll to bottom"
     >
       <svg
-        className="h-[18px] w-[18px] text-[var(--text-muted)]"
+        className="h-4 w-4 text-[var(--text-muted)]"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

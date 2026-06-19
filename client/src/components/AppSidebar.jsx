@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Button } from "./ui/Button";
-import { CreditBadge } from "./ui/CreditBadge";
+import {
+  CircleEllipsis,
+  PenSquare,
+  LayoutGrid,
+  MessageSquareText,
+  NotebookPen,
+  PanelLeftClose,
+  PanelLeftOpen,
+  SquareCheckBig,
+} from "lucide-react";
 import SidebarNavItem from "./SidebarNavItem";
 import MoreMenu from "./MoreMenu";
 import ChatHistoryList from "./ChatHistoryList";
@@ -17,82 +25,21 @@ import {
 
 const SIDEBAR_COLLAPSED_KEY = "somupilot_sidebar_collapsed";
 
-const DashboardIcon = (
-  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M4 6a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm0 10a2 2 0 012-2h4a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zm10-10a2 2 0 012-2h4a2 2 0 012 2v10a2 2 0 01-2 2h-4a2 2 0 01-2-2V6zm0 14a2 2 0 012-2h4"
-    />
-  </svg>
-);
-
-const ChatIcon = (
-  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4.255-.949L3 20l1.281-3.843A7.486 7.486 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-    />
-  </svg>
-);
-
-const NotesIcon = (
-  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M9 5h6m-6 4h6m-6 4h4m-7 7h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-    />
-  </svg>
-);
-
-const TasksIcon = (
-  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 104 0M9 5a2 2 0 014 0m-6 9l2 2 4-4"
-    />
-  </svg>
-);
-
-const MoreIcon = (
-  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-    />
-  </svg>
-);
-
-const NewChatIcon = (
-  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-  </svg>
-);
-
-const CollapseIcon = ({ collapsed }) => (
-  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-    <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" strokeWidth="1.7" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" d="M8.5 4.5v15" />
-    {collapsed ? (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" d="M12 12h5m-2-2 2 2-2 2" />
-    ) : (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" d="M17 12h-5m2-2-2 2 2 2" />
-    )}
-  </svg>
-);
+const DashboardIcon = <LayoutGrid className="h-[18px] w-[18px]" strokeWidth={1.9} />;
+const ChatIcon = <MessageSquareText className="h-[18px] w-[18px]" strokeWidth={1.9} />;
+const NotesIcon = <NotebookPen className="h-[18px] w-[18px]" strokeWidth={1.9} />;
+const TasksIcon = <SquareCheckBig className="h-[18px] w-[18px]" strokeWidth={1.9} />;
+const MoreIcon = <CircleEllipsis className="h-[18px] w-[18px]" strokeWidth={1.9} />;
+const NewChatIcon = <PenSquare className="h-[19px] w-[19px]" strokeWidth={1.95} />;
+const CollapseIcon = ({ collapsed }) =>
+  collapsed ? (
+    <PanelLeftOpen className="h-[18px] w-[18px]" strokeWidth={1.9} aria-hidden="true" />
+  ) : (
+    <PanelLeftClose className="h-[18px] w-[18px]" strokeWidth={1.9} aria-hidden="true" />
+  );
 
 const primaryNavItems = [
   { label: "Dashboard", to: "/dashboard", hint: "Overview", icon: DashboardIcon },
-  { label: "Chat", to: "/chat", hint: "Assistant", icon: ChatIcon },
   { label: "Notes", to: "/notes", hint: "Knowledge", icon: NotesIcon },
   { label: "Tasks", to: "/tasks", hint: "Planner", icon: TasksIcon },
 ];
@@ -168,6 +115,8 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
     setActiveConversationId(conversationId);
   }, [location]);
 
+  const isNewChatActive = location.pathname === "/chat" && !activeConversationId;
+
   const handlePin = async (id) => {
     try {
       await toggleConversationPin(id);
@@ -231,11 +180,11 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
       return "w-[min(320px,88vw)] lg:w-[72px]";
     }
 
-    return "w-[min(320px,88vw)] lg:w-[268px]";
+    return "w-[min(304px,84vw)] lg:w-[244px]";
   }, [isRailMode]);
 
   const collapseButtonClass =
-    "flex items-center justify-center rounded-2xl border border-[var(--border-strong)] bg-[var(--surface-strong)] text-slate-300 transition-all duration-150 hover:bg-[var(--surface-elevated)] hover:text-[var(--text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]";
+    "flex items-center justify-center rounded-2xl border border-transparent bg-transparent text-slate-300 transition-all duration-150 hover:bg-[var(--hover)] hover:text-[var(--text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]";
 
   return (
     <aside
@@ -243,7 +192,7 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
         isOpen ? "translate-x-0" : "-translate-x-full"
       }`}
     >
-      <div className="shrink-0 border-b border-[var(--border)] bg-[color:var(--sidebar)]">
+      <div className="shrink-0 bg-[color:var(--sidebar)]">
         <div className={`flex items-start ${isRailMode ? "justify-center px-3 py-3.5" : "justify-between px-4 py-3.5"}`}>
           {isRailMode ? (
             <button
@@ -259,12 +208,12 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
             <>
               <div className="min-w-0">
                 <div className="mb-0.5 flex items-center gap-2">
-                  <svg className="h-7 w-7 text-teal-400" fill="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-6 w-6 text-teal-400" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                   </svg>
-                  <h1 className="truncate text-[19px] font-semibold text-[var(--text)]">SomuPilot AI</h1>
+                  <h1 className="text-glow-soft truncate text-[18px] font-semibold text-[var(--text)]">SomuPilot AI</h1>
                 </div>
-                <p className="ml-9 text-[12px] text-[var(--text-muted)]">Personal Agent</p>
+                <p className="text-glow-muted ml-8 text-[11px] text-[var(--text-muted)]">Personal Agent</p>
               </div>
 
               {isDesktop ? (
@@ -291,29 +240,43 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
               onClick={onNewChat}
               aria-label="New Chat"
               title="New Chat"
-              className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--accent-soft)] text-[var(--accent)] transition hover:bg-[var(--accent-soft)]/80"
+              className={`mb-1 flex h-11 w-11 items-center justify-center self-center rounded-xl border border-transparent transition ${
+                isNewChatActive
+                  ? "text-[var(--sidebar-active-text)]"
+                  : "bg-transparent text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)]"
+              }`}
+              style={isNewChatActive ? { backgroundColor: "var(--sidebar-active-bg)" } : undefined}
             >
               {NewChatIcon}
             </button>
           ) : (
-            <Button className="mb-4 min-h-11 w-full rounded-xl px-4 py-2 text-[15px]" onClick={onNewChat}>
-              {NewChatIcon}
-              New Chat
-            </Button>
-          )}
-
-          {!isRailMode && usage ? (
-            <div
-              className="mb-4 rounded-xl border border-[var(--border)] px-3 py-2.5"
-              style={{ backgroundColor: "var(--surface-elevated)" }}
+            <button
+              type="button"
+              onClick={onNewChat}
+              className={`mb-2.5 flex min-h-[42px] w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition ${
+                isNewChatActive
+                  ? "text-[var(--sidebar-active-text)]"
+                  : "text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)]"
+              }`}
+              style={isNewChatActive ? { backgroundColor: "var(--sidebar-active-bg)" } : undefined}
             >
-              <CreditBadge
-                credits={usage.aiCredits}
-                maxCredits={usage.maxAiCredits}
-                countdown={usageCountdown}
-              />
-            </div>
-          ) : null}
+              <span
+                className={`inline-flex h-[18px] w-[18px] items-center justify-center leading-none ${
+                  isNewChatActive ? "text-[var(--sidebar-active-text)]" : ""
+                }`}
+              >
+                {NewChatIcon}
+              </span>
+              <span
+                className={`truncate text-[14px] font-medium leading-5 ${
+                  isNewChatActive ? "" : "text-glow-soft text-[var(--text)]"
+                }`}
+                style={isNewChatActive ? { color: "var(--sidebar-active-text)" } : undefined}
+              >
+                New Chat
+              </span>
+            </button>
+          )}
 
           <nav className="space-y-1">
             {primaryNavItems.map((item) => (
@@ -346,7 +309,7 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
                   <>
                     <div className="flex items-center gap-3">
                       {MoreIcon}
-                      <span className="text-sm font-medium">More</span>
+                      <span className="text-glow-soft text-sm font-medium">More</span>
                     </div>
                     <svg
                       className={`h-4 w-4 transition-transform ${showMoreMenu ? "rotate-180" : ""}`}
@@ -375,7 +338,7 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
           </nav>
 
           {!isRailMode ? (
-            <div className="mt-4 border-t border-[var(--border)] pt-3">
+            <div className="mt-4 pt-1">
               <ChatHistoryList
                 conversations={conversations}
                 activeConversationId={activeConversationId}
@@ -393,7 +356,7 @@ function AppSidebar({ isOpen, onClose, user, usage, usageCountdown, onLogout, on
                 onClick={() => setIsCollapsed(false)}
                 aria-label="Expand recent chats"
                 title="Recent Chats"
-                className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border)] bg-white/5 text-[var(--text-muted)] transition hover:bg-[var(--hover)] hover:text-[var(--text)]"
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-transparent bg-transparent text-[var(--text-muted)] transition hover:bg-[var(--hover)] hover:text-[var(--text)]"
               >
                 {ChatIcon}
               </button>

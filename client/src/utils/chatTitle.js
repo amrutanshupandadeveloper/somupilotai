@@ -1,6 +1,3 @@
-import Conversation from "../models/Conversation.js";
-import createHttpError from "../utils/createHttpError.js";
-
 const FILLER_PREFIXES = [
   /^(please|plz|kindly)\s+/i,
   /^(can you|could you|would you|will you)\s+/i,
@@ -99,7 +96,7 @@ const titleCase = (value) =>
     .map(normalizeWord)
     .join(" ");
 
-const cleanTitleSource = (message) => {
+const cleanMessage = (message) => {
   let cleaned = String(message || "")
     .replace(/[`*_#>\-[\]]/g, " ")
     .replace(/\s+/g, " ")
@@ -218,8 +215,8 @@ const buildIntentTitle = (message) => {
   return "";
 };
 
-const generateConversationTitle = (message) => {
-  const cleaned = cleanTitleSource(message);
+export const generateChatTitleFromInput = (message) => {
+  const cleaned = cleanMessage(message);
 
   if (!cleaned) {
     return "New Chat";
@@ -247,79 +244,4 @@ const generateConversationTitle = (message) => {
   }
 
   return title || "New Chat";
-};
-
-const sanitizeConversation = (conversation) => ({
-  _id: conversation._id,
-  userId: conversation.userId,
-  title: conversation.title || "New Chat",
-  provider: conversation.provider,
-  messages: conversation.messages.map((message) => ({
-    role: message.role,
-    content: message.content,
-    createdAt: message.createdAt,
-    toolUsed: message.toolUsed,
-    toolName: message.toolName,
-    toolStatus: message.toolStatus,
-    providerUsed: message.providerUsed,
-    providerModel: message.providerModel,
-    providerPreset: message.providerPreset,
-    sources: message.sources || [],
-    documentId: message.documentId,
-    documentName: message.documentName,
-  })),
-  createdAt: conversation.createdAt,
-  updatedAt: conversation.updatedAt,
-});
-
-const createConversationPreview = (conversation) => {
-  const lastMessage = conversation.messages[conversation.messages.length - 1];
-
-  return {
-    _id: conversation._id,
-    title: conversation.title || "New Chat",
-    provider: conversation.provider,
-    isPinned: Boolean(conversation.isPinned),
-    pinnedAt: conversation.pinnedAt || null,
-    lastMessagePreview: lastMessage?.content?.slice(0, 120) || "",
-    updatedAt: conversation.updatedAt,
-    createdAt: conversation.createdAt,
-  };
-};
-
-const validateMessage = (message) => {
-  if (!message?.trim()) {
-    throw createHttpError(400, "Message is required");
-  }
-};
-
-const getConversationByIdForUser = async ({ conversationId, userId }) => {
-  const conversation = await Conversation.findOne({
-    _id: conversationId,
-    userId,
-  });
-
-  if (!conversation) {
-    throw createHttpError(404, "Conversation not found");
-  }
-
-  return conversation;
-};
-
-const appendMessage = (conversation, role, content, metadata = {}) => {
-  conversation.messages.push({
-    role,
-    content: content.trim(),
-    createdAt: new Date(),
-    ...metadata,
-  });
-};
-
-export {
-  appendMessage,
-  createConversationPreview,
-  generateConversationTitle,
-  getConversationByIdForUser,
-  sanitizeConversation,
-  validateMessage,
 };

@@ -13,7 +13,7 @@ import { ConfirmModal } from "../components/ui/ConfirmModal";
 import UserTopBarActions from "../components/UserTopBarActions";
 
 function DocumentsPage() {
-  const { setTopBarConfig, resetTopBarConfig } = useOutletContext();
+  const { setTopBarConfig, resetTopBarConfig, openUpgradeModal } = useOutletContext();
   const { usage, usageCountdown, setUsage } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -327,9 +327,30 @@ function DocumentsPage() {
               />
 
               {usage?.documentCredits === 0 ? (
-                <p className="text-sm text-rose-300">
-                  Document credits are finished. Please wait until they renew.
-                </p>
+                <div className="flex items-center justify-between gap-4 rounded-[24px] border border-zinc-800/80 bg-zinc-950/85 px-4 py-3 shadow-[0_20px_48px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:px-5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-[0_0_12px_rgba(245,158,11,0.15)]">
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-zinc-100">You're out of Document credits</h4>
+                      <p className="mt-0.5 text-xs text-zinc-400 leading-normal">
+                        Your rate limit resets in {usageCountdown}. Upgrade now to get unlimited credits.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openUpgradeModal?.()}
+                    className="rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-zinc-950 transition hover:bg-zinc-200 active:scale-95 shadow-[0_4px_12px_rgba(255,255,255,0.2)] shrink-0"
+                  >
+                    Upgrade
+                  </button>
+                </div>
               ) : null}
 
               {askError ? (

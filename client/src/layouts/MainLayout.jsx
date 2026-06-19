@@ -5,7 +5,7 @@ import { Button } from "../components/ui/Button";
 
 function MainLayout() {
   const { isAuthenticated } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, themeMode, toggleTheme } = useTheme();
 
   return (
     <div className="app-shell">
@@ -27,9 +27,9 @@ function MainLayout() {
               size="sm"
               type="button"
               onClick={(event) => toggleTheme(event)}
-              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode${themeMode === "system" ? " from system mode" : ""}`}
             >
-              <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
+              <span aria-hidden="true">{theme === "dark" ? "\u2600" : "\u263E"}</span>
             </Button>
             <Link to={isAuthenticated ? "/dashboard" : "/login"}>
               <Button variant="secondary" size="sm">

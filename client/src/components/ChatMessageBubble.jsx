@@ -137,7 +137,7 @@ function ChatMessageBubble({
   const highlightMessage = searchQuery.trim().length > 0 && isSearchMatch;
 
   const topToolbar = !isUser ? (
-    <div className="mb-3 flex justify-end">
+    <div className="mb-3">
       <div className="relative">
         <MessageActionBar
           onEdit={() => {
@@ -172,11 +172,11 @@ function ChatMessageBubble({
           style={
             isUser
               ? {
-                  backgroundColor: "#2f2f2f",
+                  backgroundColor: "var(--message-user-bg)",
                   boxShadow: highlightMessage ? "0 0 0 1px rgba(255,255,255,0.08)" : undefined,
                 }
               : {
-                  backgroundColor: "var(--surface-elevated)",
+                  backgroundColor: "var(--message-assistant-bg)",
                   boxShadow: highlightMessage ? "0 0 0 1px rgba(20,184,166,0.35)" : undefined,
                 }
           }

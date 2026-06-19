@@ -8,6 +8,7 @@ function TopBar({
   usage,
   usageCountdown,
   theme,
+  themeMode,
   onToggleTheme,
   onMenuOpen,
   compact = false,
@@ -15,10 +16,13 @@ function TopBar({
   showUsage = true,
   showThemeToggle = true,
   rightSlot = null,
+  showBorder = false,
 }) {
   return (
     <header
-      className="sticky top-0 z-30 border-b border-[var(--border)] backdrop-blur-xl"
+      className={`sticky top-0 z-30 backdrop-blur-xl transition-[border-color,box-shadow] duration-200 ${
+        showBorder ? "border-b border-[var(--border)]" : "border-b border-transparent"
+      }`}
       style={{ backgroundColor: "var(--sidebar)" }}
     >
       <div
@@ -60,7 +64,7 @@ function TopBar({
               variant="secondary"
               size="sm"
               onClick={(event) => onToggleTheme(event)}
-              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode${themeMode === "system" ? " from system mode" : ""}`}
             >
               <span aria-hidden="true">{theme === "dark" ? "\u2600" : "\u263E"}</span>
             </Button>

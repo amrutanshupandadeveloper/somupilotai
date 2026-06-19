@@ -207,7 +207,7 @@ export function DashboardShellSkeleton() {
     <div className="app-shell flex h-screen overflow-hidden bg-black">
       <div className="mx-auto flex h-full w-full max-w-[1720px]">
         <aside className="hidden h-full w-[288px] shrink-0 border-r border-[var(--border)] bg-[color:var(--sidebar)] backdrop-blur-xl lg:flex lg:flex-col">
-          <div className="shrink-0 border-b border-[var(--border)] px-4 py-4">
+          <div className="shrink-0 px-4 py-4">
             <div className="flex items-start justify-between">
               <div className="min-w-0 flex-1">
                 <LoadingSkeleton className="h-6 w-36 rounded-xl" />

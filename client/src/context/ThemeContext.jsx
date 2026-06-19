@@ -8,16 +8,29 @@ const THEME_TO_LIGHT_CLASS = "theme-transition-to-light";
 const THEME_FADE_CLASS = "theme-fading";
 const THEME_DURATION_MS = 550;
 const THEME_EASING = "cubic-bezier(0.4, 0, 0.2, 1)";
+const SYSTEM_THEME_QUERY = "(prefers-color-scheme: dark)";
 const ThemeContext = createContext(null);
 
-const getInitialTheme = () => {
+const getSystemTheme = () => {
+  if (typeof window === "undefined") {
+    return "dark";
+  }
+
+  return window.matchMedia(SYSTEM_THEME_QUERY).matches ? "dark" : "light";
+};
+
+const getInitialThemeMode = () => {
+  if (typeof window === "undefined") {
+    return "system";
+  }
+
   const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
 
-  if (savedTheme === "dark" || savedTheme === "light") {
+  if (savedTheme === "dark" || savedTheme === "light" || savedTheme === "system") {
     return savedTheme;
   }
 
-  return "dark";
+  return "system";
 };
 
 const resolveTransitionOrigin = (source) => {
@@ -52,36 +65,64 @@ const resolveTransitionOrigin = (source) => {
   };
 };
 
-const applyThemeToDocument = (nextTheme) => {
+const applyThemeToDocument = (resolvedTheme, themeMode) => {
   const root = document.documentElement;
 
-  root.dataset.theme = nextTheme;
-  root.style.colorScheme = nextTheme;
-  localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+  root.dataset.theme = resolvedTheme;
+  root.dataset.themeMode = themeMode;
+  root.style.colorScheme = resolvedTheme;
+  localStorage.setItem(THEME_STORAGE_KEY, themeMode);
 };
 
 export function ThemeProvider({ children }) {
-  const [theme, setThemeState] = useState(getInitialTheme);
+  const [themeMode, setThemeModeState] = useState(getInitialThemeMode);
+  const [resolvedTheme, setResolvedThemeState] = useState(() => {
+    const initialMode = getInitialThemeMode();
+    return initialMode === "system" ? getSystemTheme() : initialMode;
+  });
   const isTransitioningRef = useRef(false);
   const pendingTransitionRef = useRef(null);
-  const themeRef = useRef(theme);
+  const themeModeRef = useRef(themeMode);
+  const resolvedThemeRef = useRef(resolvedTheme);
 
   useEffect(() => {
-    themeRef.current = theme;
-    applyThemeToDocument(theme);
-  }, [theme]);
+    themeModeRef.current = themeMode;
+    resolvedThemeRef.current = resolvedTheme;
+    applyThemeToDocument(resolvedTheme, themeMode);
+  }, [resolvedTheme, themeMode]);
 
-  const runThemeTransition = async (nextTheme, source) => {
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(SYSTEM_THEME_QUERY);
+
+    const handleSystemThemeChange = (event) => {
+      if (themeModeRef.current !== "system") {
+        return;
+      }
+
+      setResolvedThemeState(event.matches ? "dark" : "light");
+    };
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", handleSystemThemeChange);
+      return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
+    }
+
+    mediaQuery.addListener(handleSystemThemeChange);
+    return () => mediaQuery.removeListener(handleSystemThemeChange);
+  }, []);
+
+  const runThemeTransition = async (nextThemeMode, source) => {
     const root = document.documentElement;
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const currentTheme = root.dataset.theme || themeRef.current;
+    const nextResolvedTheme = nextThemeMode === "system" ? getSystemTheme() : nextThemeMode;
+    const currentResolvedTheme = root.dataset.theme || resolvedThemeRef.current;
 
-    if (nextTheme === currentTheme) {
+    if (nextResolvedTheme === currentResolvedTheme && nextThemeMode === themeModeRef.current) {
       return;
     }
 
     if (isTransitioningRef.current) {
-      pendingTransitionRef.current = { nextTheme, source };
+      pendingTransitionRef.current = { nextThemeMode, source };
       return;
     }
 
@@ -89,7 +130,8 @@ export function ThemeProvider({ children }) {
 
     const applyNextTheme = () => {
       flushSync(() => {
-        setThemeState(nextTheme);
+        setThemeModeState(nextThemeMode);
+        setResolvedThemeState(nextResolvedTheme);
       });
     };
 
@@ -104,7 +146,7 @@ export function ThemeProvider({ children }) {
         Math.max(origin.x, window.innerWidth - origin.x),
         Math.max(origin.y, window.innerHeight - origin.y)
       );
-      const isSwitchingToDark = nextTheme === "dark";
+      const isSwitchingToDark = nextResolvedTheme === "dark";
 
       root.style.setProperty("--theme-transition-x", `${origin.x}px`);
       root.style.setProperty("--theme-transition-y", `${origin.y}px`);
@@ -163,34 +205,44 @@ export function ThemeProvider({ children }) {
         const pendingTransition = pendingTransitionRef.current;
         pendingTransitionRef.current = null;
 
-        if (pendingTransition.nextTheme !== (document.documentElement.dataset.theme || themeRef.current)) {
-          runThemeTransition(pendingTransition.nextTheme, pendingTransition.source).catch(() => {
-            setThemeState(pendingTransition.nextTheme);
-          });
-        }
+        runThemeTransition(pendingTransition.nextThemeMode, pendingTransition.source).catch(() => {
+          const fallbackResolvedTheme =
+            pendingTransition.nextThemeMode === "system"
+              ? getSystemTheme()
+              : pendingTransition.nextThemeMode;
+
+          setThemeModeState(pendingTransition.nextThemeMode);
+          setResolvedThemeState(fallbackResolvedTheme);
+        });
       }
     }
   };
 
-  const setTheme = (nextTheme, source) => {
-    runThemeTransition(nextTheme, source).catch(() => {
-      setThemeState(nextTheme);
+  const setTheme = (nextThemeMode, source) => {
+    runThemeTransition(nextThemeMode, source).catch(() => {
+      const fallbackResolvedTheme =
+        nextThemeMode === "system" ? getSystemTheme() : nextThemeMode;
+
+      setThemeModeState(nextThemeMode);
+      setResolvedThemeState(fallbackResolvedTheme);
     });
   };
 
   const toggleTheme = (source) => {
-    const currentTheme = document.documentElement.dataset.theme || themeRef.current;
-    const nextTheme = currentTheme === "dark" ? "light" : "dark";
-    setTheme(nextTheme, source);
+    const currentResolvedTheme = document.documentElement.dataset.theme || resolvedThemeRef.current;
+    const nextThemeMode = currentResolvedTheme === "dark" ? "light" : "dark";
+    setTheme(nextThemeMode, source);
   };
 
   const value = useMemo(
     () => ({
-      theme,
+      theme: resolvedTheme,
+      themeMode,
+      resolvedTheme,
       setTheme,
       toggleTheme,
     }),
-    [theme]
+    [resolvedTheme, themeMode]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

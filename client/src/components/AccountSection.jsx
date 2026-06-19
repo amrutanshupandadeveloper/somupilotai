@@ -55,8 +55,8 @@ function AccountSection({ user, onLogout, collapsed = false }) {
           {!collapsed ? (
             <>
               <div className="min-w-0 flex-1 text-left">
-                <p className="truncate text-[14px] font-medium text-[var(--text)]">{user?.name}</p>
-                <p className="truncate text-[11px] text-[var(--text-muted)]">{user?.email}</p>
+                <p className="text-glow-soft truncate text-[14px] font-semibold text-[var(--text)]">{user?.name}</p>
+                <p className="text-glow-muted truncate text-[11px] font-medium text-[var(--text-muted)]">{user?.email}</p>
               </div>
               <svg
                 className={`h-4 w-4 text-[var(--text-muted)] transition-transform ${
@@ -84,14 +84,14 @@ function AccountSection({ user, onLogout, collapsed = false }) {
             }`}
           >
             <div className="border-b border-[var(--border)] px-3 py-2">
-              <p className="truncate text-sm font-medium text-[var(--text)]">{user?.name}</p>
-              <p className="truncate text-xs text-[var(--text-muted)]">{user?.email}</p>
+              <p className="text-glow-soft truncate text-sm font-semibold text-[var(--text)]">{user?.name}</p>
+              <p className="text-glow-muted truncate text-xs font-medium text-[var(--text-muted)]">{user?.email}</p>
             </div>
             {user?.role === "admin" ? (
               <NavLink
                 to="/admin/dashboard"
                 onClick={() => setShowMenu(false)}
-                className="block px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--hover)]"
+                className="text-glow-soft block px-3 py-2 text-sm font-semibold text-[var(--text)] hover:bg-[var(--hover)]"
               >
                 Admin Panel
               </NavLink>
@@ -99,7 +99,7 @@ function AccountSection({ user, onLogout, collapsed = false }) {
             <NavLink
               to="/settings"
               onClick={() => setShowMenu(false)}
-              className="block px-3 py-2 text-sm text-[var(--text)] hover:bg-[var(--hover)]"
+              className="text-glow-soft block px-3 py-2 text-sm font-semibold text-[var(--text)] hover:bg-[var(--hover)]"
             >
               Profile / Settings
             </NavLink>
@@ -109,7 +109,7 @@ function AccountSection({ user, onLogout, collapsed = false }) {
                 onLogout();
                 setShowMenu(false);
               }}
-              className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10"
+              className="w-full px-3 py-2 text-left text-sm font-semibold text-red-400 hover:bg-red-500/10"
             >
               Logout
             </button>
